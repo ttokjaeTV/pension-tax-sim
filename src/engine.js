@@ -5,6 +5,7 @@ const RULE = {
   SEP_RATE: 0.15,             // 1,500만원 초과 시 선택 분리과세 (국세)
   OTHER_RATE: 0.15,           // 연금외수령 기타소득세 (국세)
   BASIC_DEDUCTION: 1500000,   // 본인 기본공제
+  STD_CREDIT: 70000,          // 표준세액공제 (근로소득 없는 종합소득자, 소득세법 59조의4⑨2호나목)
 };
 
 // 연금소득세율 (국세) - 확정기간형, 수령 시점 나이
@@ -44,11 +45,12 @@ function pensionDeduction(total) {
 }
 
 // 종합소득세 (지방세 포함) - 연금소득 + 기타 종합소득금액
+// 산출세액 − 표준세액공제 7만원(0원 미만 없음) → 지방소득세 10% 가산
 function comprehensiveTax(publicPension, privatePension, otherIncome) {
   const total = publicPension + privatePension;
   const income = total - pensionDeduction(total) + otherIncome;
   const base = Math.max(0, income - RULE.BASIC_DEDUCTION);
-  return progressiveTax(base) * RULE.LOCAL;
+  return Math.max(0, progressiveTax(base) - RULE.STD_CREDIT) * RULE.LOCAL;
 }
 
 // 퇴직소득세 (국세) 간이 계산 - 근속연수공제·환산급여공제 (2023년 이후)
@@ -100,8 +102,10 @@ function simulate(p) {
     withdrawn: 0, tax: 0, net: 0,
     taxRetire: 0, taxPensionLow: 0, taxPensionHigh: 0, taxOther: 0,
     from1: 0, from2: 0, from3: 0,
+    pen2: 0, over2: 0, pen3: 0, over3: 0,   // 연금수령분(한도 안) vs 연금외수령분(한도 초과)
     overYears: 0, overAmount: 0,
     highYears: 0, compYears: 0, sepYears: 0,
+    lowYears: 0, lowCompYears: 0,            // 1,500만원 이하인 해 / 그중 종합과세가 유리해 선택한 해
   };
 
   // 한 번에 해지 (전액 연금외수령)
@@ -113,11 +117,11 @@ function simulate(p) {
       n: 1, age: p.startAge, limitYear: null, startBal: total0, limit: 0,
       w: total0, from1: b1, from2: b2, from3: b3, over: total0,
       taxRetire: tRet, taxPension: 0, taxOther: tOth, tax, net: total0 - tax,
-      method: '전액 연금외수령', p3: 0, endBal: 0,
+      method: '전액 연금외수령', p3: 0, endBal: 0, pen2: 0, over2: b2, over3: b3,
     });
     Object.assign(sum, {
       withdrawn: total0, tax, net: total0 - tax, taxRetire: tRet, taxOther: tOth,
-      from1: b1, from2: b2, from3: b3, overYears: 1, overAmount: total0,
+      from1: b1, from2: b2, from3: b3, over2: b2, over3: b3, overYears: 1, overAmount: total0,
     });
     sum.effRate = total0 > 0 ? tax / total0 : 0;
     sum.years = 1;
@@ -191,15 +195,19 @@ function simulate(p) {
     let tPen = 0, method = '-';
     let lowFlag = false, highFlag = false;
     if (p3 > 0) {
+      // 종합과세 시 ③ 때문에 늘어나는 세금 = (공적+③) − (공적만), 표준세액공제 반영
+      const pub = (p.publicStartAge == null || age >= p.publicStartAge) ? (p.publicPension || 0) : 0;
+      const comp = comprehensiveTax(pub, p3, p.otherIncome || 0)
+                 - comprehensiveTax(pub, 0, p.otherIncome || 0);
       if (p3 <= RULE.SEP_LIMIT) {
-        tPen = p3 * pensionRate(age) * RULE.LOCAL;
-        method = '저율 ' + (pensionRate(age) * 110).toFixed(1) + '%';
+        // 1,500만원 이하: 저율 분리과세(3.3~5.5%)가 기본, 종합과세 합산도 선택 가능 (소득세법 14조③9호 괄호)
+        const low = p3 * pensionRate(age) * RULE.LOCAL;
         lowFlag = true;
+        if (comp < low) { tPen = comp; method = '종합과세 선택'; sum.lowCompYears++; }
+        else { tPen = low; method = '저율 ' + (pensionRate(age) * 110).toFixed(1) + '%'; }
       } else {
+        // 1,500만원 초과: 전액 종합과세 vs 16.5% 분리과세 중 선택 (소득세법 64조의4)
         const sep = p3 * RULE.SEP_RATE * RULE.LOCAL;
-        const pub = (p.publicStartAge == null || age >= p.publicStartAge) ? (p.publicPension || 0) : 0;
-        const comp = comprehensiveTax(pub, p3, p.otherIncome)
-                   - comprehensiveTax(pub, 0, p.otherIncome);
         highFlag = true;
         if (comp < sep) { tPen = comp; method = '종합과세 선택'; sum.compYears++; }
         else { tPen = sep; method = '분리과세 16.5%'; sum.sepYears++; }
@@ -218,13 +226,15 @@ function simulate(p) {
       from1: take.b1, from2: take.b2, from3: take.b3, over,
       taxRetire: tRet, taxPension: tPen, taxOther: tOth, tax, net: w - tax,
       method, p3, endBal: b1 + b2 + b3,
+      pen2: pen.b2, over2: out.b2, over3: out.b3,
     });
 
     sum.withdrawn += w; sum.tax += tax; sum.net += w - tax;
     sum.taxRetire += tRet; sum.taxOther += tOth;
-    if (lowFlag) sum.taxPensionLow += tPen;
+    if (lowFlag) { sum.taxPensionLow += tPen; sum.lowYears++; }
     if (highFlag) { sum.taxPensionHigh += tPen; sum.highYears++; }
     sum.from1 += take.b1; sum.from2 += take.b2; sum.from3 += take.b3;
+    sum.pen2 += pen.b2; sum.over2 += out.b2; sum.pen3 += pen.b3; sum.over3 += out.b3;
     if (over > 0.5) { sum.overYears++; sum.overAmount += over; }
   }
   sum.effRate = sum.withdrawn > 0 ? sum.tax / sum.withdrawn : 0;

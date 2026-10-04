@@ -38,15 +38,16 @@ eq('3단계 감면 총세금', res.sum.tax, (4e7 * 0.07 + 4e7 * 0.06 + 2e7 * 0.0
 res = E.simulate({ startAge: 60, eligAge: 55, pre2013: false, b1: 5e6, b2: 0, retTaxNat: 0, b3: 1e8,
   r: 0, mode: 'amount', amount: 1e7, publicPension: 0, otherIncome: 0 });
 eq('순서 ①먼저 from1', res.rows[0].from1, 5e6);
-eq('순서 ③ 500만 5.5%', res.rows[0].taxPension, 5e6 * 0.055);
+// ③ 500만, 다른 소득 0 → 종합과세: 연금소득공제 350+60=410만 → 소득 90만 − 기본공제 150만 < 0 → 0원 (저율 5.5% 27.5만보다 유리)
+eq('③ 500만 종합과세 선택 0원', res.rows[0].taxPension, 0);
+eq('③ 500만 1년차 종합과세 선택', res.rows[0].method === '종합과세 선택' ? 1 : 0, 1, 0);
 
 // 8) 1,500만 초과: 공적연금 0, 2,000만 → 종합과세 vs 16.5%
 res = E.simulate({ startAge: 65, eligAge: 55, pre2013: false, b1: 0, b2: 0, retTaxNat: 0, b3: 2e7,
   r: 0, mode: 'amount', amount: 2e7, publicPension: 0, otherIncome: 0 });
-const ded = E.pensionDeduction(2e7); // 630+60=690만
-const comp = E.progressiveTax(2e7 - ded - 1.5e6) * 1.1;
-console.log('  1,500초과 종합', Math.round(comp), '분리', 2e7 * 0.165, '선택', res.rows[0].method);
-eq('1,500초과 min 선택', res.rows[0].taxPension, Math.min(comp, 2e7 * 0.165));
+// 손계산: 공제 630+60=690만 → 소득 1,310만 − 150만 = 과표 1,160만 × 6% = 69.6만 − 표준세액공제 7만 = 62.6만 × 1.1 = 688,600 (< 16.5% 330만)
+console.log('  1,500초과 선택', res.rows[0].method);
+eq('1,500초과 종합(표준세액공제 반영) 688,600', res.rows[0].taxPension, 688600);
 
 // 9) 2013 이전 가입 → 6년차부터 → 60세 시작(기산55)이면 11년차 → 한도 없음
 res = E.simulate({ startAge: 60, eligAge: 55, pre2013: true, b1: 0, b2: 0, retTaxNat: 0, b3: 1e8,
@@ -68,6 +69,10 @@ res = E.simulate({ startAge: 60, eligAge: 55, pre2013: false, b1: 0, b2: 0, retT
 const c0 = E.comprehensiveTax(0, 2e7, 0), c1 = E.comprehensiveTax(1.44e7, 2e7, 0) - E.comprehensiveTax(1.44e7, 0, 0);
 eq('60세 공적연금 미합산', res.rows[0].taxPension, Math.min(c0, 2e7 * 0.165));
 eq('64세 공적연금 합산', res.rows[4].taxPension, Math.min(c1, 2e7 * 0.165));
+// 손계산: 공적 1,440만만 → 공제 634만 → 과표 656만 × 6% = 39.36만 − 7만 → 32.36만 × 1.1 = 355,960
+//         공적+③ 3,440만 → 공제 834만 → 과표 2,456만 × 15% − 126만 = 242.4만 − 7만 → 235.4만 × 1.1 = 2,589,400
+eq('공적연금만 종합세 355,960', E.comprehensiveTax(1.44e7, 0, 0), 355960);
+eq('64세 ③ 증가분 2,233,440', res.rows[4].taxPension, 2589400 - 355960);
 // 12) 1,500 맞춤: r=0, ① 0, ② 1억(세율 0), ③ 1억, phase1 2,500, cap 1,500
 res = E.simulate({ startAge: 60, eligAge: 50, pre2013: false, b1: 0, b2: 1e8, retTaxNat: 0, b3: 1e8,
   r: 0, mode: 'cap', phase1Amount: 2.5e7, capAmount: 1.5e7, publicPension: 0, otherIncome: 0 });
@@ -100,4 +105,44 @@ eq('split 4년차 ② (①소진 후)', res.rows[3].from2, 1e7);
 eq('split 희망액 유지 7년', res.rows.filter(r => r.w >= 2.5e7 - 1).length, 7, 0);
 eq('split 1500초과 없음', res.sum.highYears, 0, 0);
 eq('split 총인출', res.sum.withdrawn, 1.9e8);
+
+// 14) 표준세액공제 7만원 (근로소득 없는 종합소득자) — 0원 아래로 내려가지 않음
+eq('표준세액공제: ③ 1,000만 종합세 121,000', E.comprehensiveTax(0, 1e7, 0), 121000); // 공제 550만 → 과표 300만 ×6%=18만 −7만 = 11만 ×1.1
+eq('표준세액공제: 산출 6만 → 0원', E.comprehensiveTax(0, 0, 2.5e6), 0);          // 과표 100만 ×6% = 6만 < 7만
+// 15) ≤1,500만 종합과세 선택권: 65세, ③ 1,500만, 다른 소득 0
+res = E.simulate({ startAge: 65, eligAge: 55, pre2013: false, b1: 0, b2: 0, retTaxNat: 0, b3: 1e8,
+  r: 0, mode: 'amount', amount: 1.5e7, publicPension: 0, otherIncome: 0 });
+// 공제 630+10=640만 → 과표 710만 × 6% = 42.6만 − 7만 = 35.6만 × 1.1 = 391,600 < 저율 82.5만
+eq('≤1500 종합 선택 391,600', res.rows[0].taxPension, 391600);
+eq('≤1500 종합 선택 method', res.rows[0].method === '종합과세 선택' ? 1 : 0, 1, 0);
+eq('≤1500 해 카운트', res.sum.lowYears, res.rows.length, 0);
+// 다른 소득 5,000만이면 저율 유지: 증가분 7,579,000 − 6,539,500 = 1,039,500 > 저율 55만
+res = E.simulate({ startAge: 65, eligAge: 55, pre2013: false, b1: 0, b2: 0, retTaxNat: 0, b3: 1e8,
+  r: 0, mode: 'amount', amount: 1e7, publicPension: 0, otherIncome: 5e7 });
+eq('다른소득 5천 종합세(③없음) 6,539,500', E.comprehensiveTax(0, 0, 5e7), 6539500);
+eq('다른소득 5천 종합세(③1천) 7,579,000', E.comprehensiveTax(0, 1e7, 5e7), 7579000);
+eq('≤1500 저율 유지 550,000', res.rows[0].taxPension, 550000);
+eq('≤1500 저율 method', res.rows[0].method === '저율 5.5%' ? 1 : 0, 1, 0);
+// 80세, ③ 1,500만, 다른 소득 0 → 종합 391,600 < 3.3% 495,000
+res = E.simulate({ startAge: 80, eligAge: 55, pre2013: false, b1: 0, b2: 0, retTaxNat: 0, b3: 3e7,
+  r: 0, mode: 'amount', amount: 1.5e7, publicPension: 0, otherIncome: 0 });
+eq('80세 ≤1500 종합 선택 391,600', res.rows[0].taxPension, 391600);
+// 16) 한도 안/초과 분리 필드: 미래에셋 예시 (② 2,500 인출, 한도 2,400)
+res = E.simulate({ startAge: 57, eligAge: 55, pre2013: false, b1: 0, b2: 1.2e8, retTaxNat: 1.2e7, b3: 0.4e8,
+  r: 0, mode: 'amount', amount: 2.5e7, publicPension: 0, otherIncome: 0 });
+eq('② 한도 안 pen2 2,400만', res.rows[0].pen2, 2.4e7);
+eq('② 한도 초과 over2 100만', res.rows[0].over2, 1e6);
+eq('② 초과분 퇴직세 100% (2,400×7%+100×10%)×1.1', res.rows[0].taxRetire, (2.4e7 * 0.07 + 1e6 * 0.1) * 1.1);
+eq('sum.over2+over3 = overAmount (① 0)', res.sum.over2 + res.sum.over3, res.sum.overAmount);
+const L2 = E.simulate({ startAge: 60, eligAge: 55, pre2013: false, b1: 1e7, b2: 2e7, retTaxNat: 2e6, b3: 3e7, r: 0, mode: 'lump', publicPension: 0, otherIncome: 0 });
+eq('일시해지 over2·over3', L2.sum.over2 + L2.sum.over3, 5e7);
+eq('일시해지 세금 2,000×10%×1.1 + 3,000×16.5%', L2.sum.tax, 2.2e6 + 4.95e6);
+// 17) 기본 예시 회귀 (Python 독립 구현과 0원 차이 확인)
+const P0 = { startAge: 60, eligAge: 55, pre2013: false, b1: 3e7, b2: 2e8, retTaxNat: E.retirementTax(2e8, 25), b3: 1.5e8, r: 0.04, publicPension: 0, publicStartAge: 65, otherIncome: 0 };
+const y20 = E.simulate({ ...P0, mode: 'years', years: 20 });
+const W0 = Math.round(y20.rows[0].w / 1e4) * 1e4;
+eq('회귀 20년 균등 총세금', y20.sum.tax, 20341498);
+eq('회귀 일시 해지 총세금', E.simulate({ ...P0, mode: 'lump' }).sum.tax, 30332500);
+eq('회귀 1,500 맞춤 총세금', E.simulate({ ...P0, mode: 'cap', phase1Amount: W0, capAmount: 1.5e7 }).sum.tax, 13924878);
+eq('회귀 나눠 받기 총세금', E.simulate({ ...P0, mode: 'split', desired: W0, capAmount: 1.5e7 }).sum.tax, 11443826);
 console.log(fail ? `\n${fail} FAIL` : '\nALL PASS');
