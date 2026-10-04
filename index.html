@@ -253,13 +253,13 @@
   /* 전략 비교 표 */
   .table-wrap { overflow-x: auto; margin-top: 16px; border-radius: 12px; -webkit-overflow-scrolling: touch; }
   .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .data-table th { background: var(--bg-alt); padding: 12px 10px; text-align: right; font-weight: 800; color: var(--ink-soft); font-size: 12px; border-bottom: 1.5px solid var(--border); white-space: nowrap; }
+  .data-table th { background: var(--bg-alt); padding: 12px 10px; text-align: right; font-weight: 800; color: var(--ink-soft); font-size: 13px; border-bottom: 1.5px solid var(--border); white-space: nowrap; }
   .data-table th:first-child, .data-table td:first-child { text-align: left; }
   .data-table td { padding: 12px 10px; text-align: right; border-bottom: 1px solid var(--border); font-weight: 600; white-space: nowrap; }
   .data-table tbody tr:hover { background: var(--bg-alt); }
   .data-table tr.mine td { background: var(--accent-soft); font-weight: 800; }
-  .data-table .best-badge { display: inline-block; font-size: 11px; font-weight: 900; background: var(--green); color: var(--white); padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
-  .data-table .mine-badge { display: inline-block; font-size: 11px; font-weight: 900; background: var(--accent); color: var(--white); padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+  .data-table .best-badge { display: inline-block; font-size: 12px; font-weight: 900; background: var(--green); color: var(--white); padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+  .data-table .mine-badge { display: inline-block; font-size: 12px; font-weight: 900; background: var(--accent); color: var(--white); padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
   .data-table td.warn { color: var(--accent); font-weight: 800; }
   .yr-table { min-width: 1080px; font-size: 13px; }
   .yr-table td.c1 { color: var(--b1); } .yr-table td.c2 { color: var(--b2); } .yr-table td.c3 { color: var(--b3); }
@@ -269,7 +269,7 @@
   .yr-table tr.hl-year td { background: #F6EBDD; }
   .bn { display: inline-flex; align-items: center; justify-content: center; width: 1.25em; height: 1.25em; border-radius: 50%; color: #FBF7F0; font-size: 0.78em; font-weight: 900; line-height: 1; vertical-align: 0.1em; margin-right: 1px; font-style: normal; }
   .bn.n1 { background: var(--b1); } .bn.n2 { background: var(--b2); } .bn.n3 { background: var(--b3); }
-  .pill { display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
   .pill.low { background: var(--green-soft); color: var(--green); }
   .pill.high { background: #FBE3D6; color: var(--accent); }
 
@@ -621,7 +621,7 @@
   <div class="card">
     <div class="step-label"><div class="step-line"></div><span class="step-text">STEP 02</span></div>
     <div class="step-title">언제부터, 어떻게 받으실 건가요?</div>
-    <div class="step-desc">매년 같은 금액을 받는다고 가정하고 계산합니다.</div>
+    <div class="step-desc">고른 방법(기간·금액·1,500만원 맞춤)에 따라 해마다 받는 금액을 정해 계산합니다.</div>
 
     <div class="grid-3">
       <div>
@@ -981,7 +981,7 @@
       <div class="how-card">
         <div class="how-no">방법 B</div>
         <div class="how-t"><span class="bn n1">1</span>이 연금저축에 섞여 있다면 <b>미리 빼 두기</b></div>
-        <div class="how-d">한 계좌 안에서는 <span class="bn n1">1</span>이 먼저 빠져서 <span class="bn n3">3</span>을 꽉 채울 수 없어요. 연금 개시 전에 연금저축에서 <span class="bn n1">1</span> 금액만큼만 인출하면 세금이 없어요(금융회사에 과세제외금액으로 등록돼 있어야 해요). 이 돈을 예금·ISA 같은 <b>'보충 통장'</b>에 두고 매년 부족분을 꺼내 쓰세요. 단, <b>IRP는 법에서 정한 사유가 있을 때만</b> 중간에 일부를 뺄 수 있고, <span class="bn n1">1</span>보다 많이 빼면 넘은 부분은 16.5%가 붙어요.</div>
+        <div class="how-d">한 계좌 안에서는 <span class="bn n1">1</span>이 먼저 빠져서 <span class="bn n3">3</span>을 꽉 채울 수 없어요. 연금 개시 전에 연금저축에서 <span class="bn n1">1</span> 금액만큼만 인출하면 세금이 없어요(금융회사에 과세제외금액으로 등록돼 있어야 해요). 이 돈을 예금·ISA 같은 <b>'보충 통장'</b>에 두고 매년 부족분을 꺼내 쓰세요. 단, <b>IRP는 법에서 정한 사유가 있을 때만</b> 중간에 일부를 뺄 수 있고, <span class="bn n1">1</span>보다 많이 빼면 넘은 부분에 세금이 붙어요 — 퇴직금(<span class="bn n2">2</span>)에서 나가면 퇴직소득세 100%, 세액공제분·수익(<span class="bn n3">3</span>)에서 나가면 16.5%예요.</div>
       </div>
       <div class="how-card">
         <div class="how-no">방법 C</div>
@@ -1074,7 +1074,7 @@
         <div class="rule"><div class="rule-no">RULE 07 · 1,500만원</div><div class="rule-title"><span class="bn n3">3</span> 바구니만 따져요</div>
           <div class="rule-body">1년에 <span class="bn n3">3</span>에서 연금으로 받은 돈이 <b>1,500만원 이하면 3.3~5.5%</b>로 끝. 넘으면 <b>전액</b>을 종합과세 또는 16.5% 분리과세 중 골라야 합니다. <span class="bn n1">1</span>·<span class="bn n2">2</span>에서 받은 돈은 여기에 포함되지 않아요. 여러 계좌가 있으면 모두 합산합니다. 위의 <b>'1,500만원 체크'</b> 카드에서 내 계획을 바로 진단할 수 있어요.</div></div>
         <div class="rule"><div class="rule-no">RULE 08 · 알아두면 좋은 것</div><div class="rule-title">건보료와 종신형</div>
-          <div class="rule-body">연금저축·IRP에서 받는 연금은 현재 <b>건강보험료 부과 대상이 아닙니다</b>(공적연금만 부과). 종신형으로 받으면 나이와 관계없이 3.3%(2026년 신설)지만, 종신형은 보험사 연금 상품에서만 선택할 수 있어 ETF를 담는 증권사 계좌는 위의 확정기간형 세율로 계산했습니다.</div></div>
+          <div class="rule-body">연금저축·IRP에서 받는 연금은 현재 <b>건강보험료 부과 대상이 아닙니다</b>(공적연금만 부과). 종신형으로 받으면 2026년부터 나이와 관계없이 3.3%로 낮아졌지만(이전 80세 미만 4.4%), 종신형은 보험사 연금 상품에서만 선택할 수 있어 ETF를 담는 증권사 계좌는 위의 확정기간형 세율로 계산했습니다.</div></div>
       </div>
     </details>
   </div>
@@ -1620,7 +1620,11 @@ function renderSplit(p, mine) {
   const want = Math.max(100000, num('want'));
   const CAP = 15000000;
   const sp = simulate({ ...p, mode: 'split', desired: want, capAmount: CAP });
-  const sm = simulate({ ...p, mode: 'amount', amount: want });
+  // '그냥 같은 금액 받기'가 내 계획(기간·금액 방식)과 같은 금액이면 내 계획 결과를 그대로 쓴다.
+  // (입력칸이 만원 단위로 반올림돼 따로 계산하면 KEY INSIGHT·STEP 04와 세금이 몇만 원 어긋남)
+  const mineW = mine.res.rows[0] ? mine.res.rows[0].w : 0;
+  const sameAsMine = (p.mode === 'years' || p.mode === 'amount') && Math.abs(mineW - want) < 10000;
+  const sm = sameAsMine ? mine.res : simulate({ ...p, mode: 'amount', amount: want });
   const cp = simulate({ ...p, mode: 'cap', phase1Amount: want, capAmount: CAP });
   $('want-hint').innerHTML = `월 <b>${fmtMan(want / 12)}</b>`;
 
@@ -1650,7 +1654,7 @@ function renderSplit(p, mine) {
   }).join('') + (sp.sum.leftover > 10000 ? `<div class="phase short"><div class="phase-age">100세<small>이후</small></div><div class="phase-src">계좌에 <b>${fmtShort(sp.sum.leftover)}</b>이 남아요</div><span class="phase-badge">잔액</span></div>` : '');
 
   // 비교
-  const keep = (res) => { const k = res.rows.filter(r => r.w >= want - 1); return k.length ? `${k.length}년 (${k[0].age}~${k[k.length - 1].age}세)` : '없음'; };
+  const keep = (res) => { const k = res.rows.filter(r => r.w >= want - 10000); return k.length ? `${k.length}년 (${k[0].age}~${k[k.length - 1].age}세)` : '없음'; };
   const hi = (res) => res.rows.filter(r => r.p3 > RULE.SEP_LIMIT).length;
   const cmp = [['그냥 같은 금액 받기', sm, ''], ['순서대로 1,500 맞춤', cp, ''], ['계좌 나눠 받기', sp, 'pick']];
   $('split-cmp').querySelector('tbody').innerHTML = cmp.map(([n, r, c]) => `<tr class="${c}"><td>${n}${c ? '<span class="best-badge">추천</span>' : ''}</td><td>${keep(r)}</td><td class="${hi(r) ? 'warn' : ''}">${hi(r) ? hi(r) + '년' : '없음'}</td><td>${fmtT(r.sum.tax)}</td><td>${pct(r.sum.effRate)}</td></tr>`).join('');
