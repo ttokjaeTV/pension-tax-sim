@@ -1,4 +1,6 @@
 /* ===== 연금인출 세금 엔진 (2026년 세법 기준) ===== */
+/* 주의: 은퇴 5년 전 점검 가이드(ttokjaeTV/retire-check)가 이 파일(src/engine.js)을 직접 불러 4단계 세금을 계산합니다.
+   simulate · retirementTax 함수 이름과 입력·출력 형식을 바꾸면 가이드도 같이 확인하세요. */
 const RULE = {
   LOCAL: 1.1,                 // 지방소득세 10% 가산
   SEP_LIMIT: 15000000,        // 사적연금 저율 분리과세 기준 (연)

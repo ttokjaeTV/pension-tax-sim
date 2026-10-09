@@ -1106,6 +1106,8 @@
 
 <script>
 /* ===== 연금인출 세금 엔진 (2026년 세법 기준) ===== */
+/* 주의: 은퇴 5년 전 점검 가이드(ttokjaeTV/retire-check)가 이 파일(src/engine.js)을 직접 불러 4단계 세금을 계산합니다.
+   simulate · retirementTax 함수 이름과 입력·출력 형식을 바꾸면 가이드도 같이 확인하세요. */
 const RULE = {
   LOCAL: 1.1,                 // 지방소득세 10% 가산
   SEP_LIMIT: 15000000,        // 사적연금 저율 분리과세 기준 (연)
@@ -1901,6 +1903,41 @@ $('apply-split').addEventListener('click', () => {
   render();
   document.querySelectorAll('.card')[2].scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
+/* ===== 주소로 값 받기 (예: ?from=guide&b2=30000&start-age=58&amount=3580) =====
+   금액은 만원 단위. 값이 없으면 아무것도 바꾸지 않는다. */
+const GUIDE_URL = 'https://ttokjaetv.github.io/retire-check/';
+(function applyQuery() {
+  let q;
+  try { q = new URLSearchParams(location.search); } catch (e) { return; }
+  const ids = ['b1', 'b2', 'b3', 'ret-years', 'start-age', 'rate', 'years', 'amount', 'public', 'pub-start', 'other', 'elig-age'];
+  let filled = 0;
+  ids.forEach(id => {
+    if (!q.has(id)) return;
+    const v = parseFloat(q.get(id));
+    if (!isFinite(v) || v < 0 || v > 1e7) return;
+    const el = $(id);
+    el.value = el.hasAttribute('data-man') ? Math.round(v).toLocaleString() : String(v);
+    filled++;
+  });
+  if (q.get('pre2013') === '1') { $('pre2013').checked = true; filled++; }
+  if (!filled) return;
+  if (q.has('b1')) pick('b1-mode', 'direct');
+  if (q.has('b3')) pick('b3-mode', 'direct');
+  if (q.has('ret-years')) pick('ret-mode', 'calc');
+  if (q.has('amount')) pick('mode-seg', 'amount');
+  else if (q.has('years')) pick('mode-seg', 'years');
+  if (q.has('public')) pick('pub-mode', 'direct');
+  if (['public', 'pub-start', 'other', 'elig-age', 'pre2013'].some(k => q.has(k))) $('adv').open = true;
+  if (q.get('from') === 'guide') {
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;padding:14px 18px;margin-bottom:24px;font-size:14.5px;font-weight:700;line-height:1.6;';
+    bar.innerHTML = '<span>은퇴 5년 전 점검 가이드에서 가져온 값으로 채웠습니다. 근속연수·수익률은 직접 확인해 주세요.</span>'
+      + '<a href="' + GUIDE_URL + '" style="color:var(--accent);font-weight:800;white-space:nowrap;text-decoration:none;">← 점검 가이드로 돌아가기</a>';
+    const first = document.querySelector('.card');
+    if (first) first.parentNode.insertBefore(bar, first);
+  }
+})();
+
 let rz = null;
 window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(render, 200); });
 render();
