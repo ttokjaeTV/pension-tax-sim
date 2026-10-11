@@ -375,6 +375,12 @@
     .grid-4 { grid-template-columns: 1fr; }
     .taxmap { grid-template-columns: 1fr; }
   }
+
+  /* 표 내려받기 (CSV·엑셀) */
+  .dl-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0 0 12px; }
+  .dl-btn { font-family: inherit; font-size: 13px; font-weight: 700; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--accent, #D9542B); background: #FBF7F0; color: var(--accent, #D9542B); cursor: pointer; line-height: 1.2; }
+  .dl-btn:hover { background: var(--accent, #D9542B); color: #fff; }
+  .dl-note { font-size: 12px; color: #8B7B6B; font-weight: 600; word-break: keep-all; }
 </style>
 </head>
 <body>
@@ -1028,6 +1034,11 @@
         <span class="chart-title" style="font-size:16px;">연도별 상세표</span>
         <span class="fold-btn"><span class="open-txt">펼치기 ▾</span><span class="close-txt">접기 ▴</span></span>
       </summary>
+      <div class="dl-bar" style="margin-top:12px;">
+        <button type="button" class="dl-btn" id="dl-csv">CSV 내려받기</button>
+        <button type="button" class="dl-btn" id="dl-xlsx">엑셀(.xlsx) 내려받기</button>
+        <span class="dl-note">내 계획의 연도별 표 + 받는 방법 비교표 (원 단위 숫자)</span>
+      </div>
       <div class="table-wrap">
         <table class="data-table yr-table" id="yr-table">
           <thead><tr>
@@ -1105,6 +1116,86 @@
 </div>
 
 <script>
+// ============== 표 내려받기 (CSV · 엑셀 .xlsx) — 외부 라이브러리 없이 동작 ==============
+// TJX.csv('파일이름', rows) · TJX.xlsx('파일이름', [{ name: '시트', rows, widths }])
+// rows = [[머리글...], [값...], ...]  숫자는 숫자 그대로 넣으면 엑셀에서 계산 가능한 숫자 칸이 됩니다
+const TJX = (() => {
+  const enc = new TextEncoder();
+  function csvText(rows) {
+    return '﻿' + rows.map(r => r.map(v => {
+      if (v == null) return '';
+      if (typeof v === 'number') return isFinite(v) ? String(Math.round(v * 100) / 100) : '';
+      const t = String(v);
+      return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+    }).join(',')).join('\r\n');
+  }
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zipStore(files) {   // 압축 없이 묶기 (엑셀은 이 형식도 그대로 엽니다)
+    const parts = [], central = []; let off = 0;
+    for (const f of files) {
+      const nm = enc.encode(f.name), d = enc.encode(f.text), c = crc32(d);
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+      lh.setUint16(12, 0x21, true); lh.setUint32(14, c, true); lh.setUint32(18, d.length, true); lh.setUint32(22, d.length, true);
+      lh.setUint16(26, nm.length, true);
+      parts.push(new Uint8Array(lh.buffer), nm, d);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+      ch.setUint16(14, 0x21, true); ch.setUint32(16, c, true); ch.setUint32(20, d.length, true); ch.setUint32(24, d.length, true);
+      ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+      central.push(new Uint8Array(ch.buffer), nm);
+      off += 30 + nm.length + d.length;
+    }
+    const cs = central.reduce((s, a) => s + a.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cs, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const colName = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  function sheetXml(sh) {
+    const rows = sh.rows || [];
+    const nCol = rows.reduce((m, r) => Math.max(m, r.length), 1);
+    const widths = sh.widths || [];
+    const cols = Array.from({ length: nCol }, (_, i) => `<col min="${i + 1}" max="${i + 1}" width="${widths[i] || (i === 0 ? 12 : 16)}" customWidth="1"/>`).join('');
+    const body = rows.map((r, ri) => `<row r="${ri + 1}">` + r.map((v, ci) => {
+      const ref = colName(ci) + (ri + 1);
+      if (v == null || v === '') return '';
+      if (typeof v === 'number' && isFinite(v)) {
+        const st = ri === 0 ? 2 : (Math.abs(v - Math.round(v)) < 1e-9 ? 1 : 3);
+        return `<c r="${ref}" s="${st}"><v>${Math.round(v * 10000) / 10000}</v></c>`;
+      }
+      return `<c r="${ref}" t="inlineStr"${ri === 0 ? ' s="2"' : ''}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+    }).join('') + '</row>').join('');
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${cols}</cols><sheetData>${body}</sheetData></worksheet>`;
+  }
+  function xlsxBlob(sheets) {
+    const W = 'http://schemas.openxmlformats.org';
+    const files = [
+      { name: '[Content_Types].xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="${W}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>` },
+      { name: '_rels/.rels', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${W}/package/2006/relationships"><Relationship Id="rId1" Type="${W}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+      { name: 'xl/workbook.xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${W}/spreadsheetml/2006/main" xmlns:r="${W}/officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${esc(String(s.name || 'Sheet' + (i + 1)).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>` },
+      { name: 'xl/_rels/workbook.xml.rels', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${W}/package/2006/relationships">${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="${W}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="${W}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+      { name: 'xl/styles.xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="${W}/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` },
+      ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, text: sheetXml(s) })),
+    ];
+    return zipStore(files);
+  }
+  function save(blob, name) {
+    const a = document.createElement('a'), u = URL.createObjectURL(blob);
+    a.href = u; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 1500);
+  }
+  const stamp = () => { const d = new Date(); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`; };
+  return {
+    csvText, xlsxBlob,
+    csv(name, rows) { save(new Blob([csvText(rows)], { type: 'text/csv;charset=utf-8' }), `${name}_${stamp()}.csv`); },
+    xlsx(name, sheets) { save(xlsxBlob(sheets), `${name}_${stamp()}.xlsx`); },
+  };
+})();
+
 /* ===== 연금인출 세금 엔진 (2026년 세법 기준) ===== */
 /* 주의: 은퇴 5년 전 점검 가이드(ttokjaeTV/retire-check)가 이 파일(src/engine.js)을 직접 불러 4단계 세금을 계산합니다.
    simulate · retirementTax 함수 이름과 입력·출력 형식을 바꾸면 가이드도 같이 확인하세요. */
@@ -1516,6 +1607,17 @@ function render() {
     if (S.over3 > 0.5) ov.push(`<span class="bn n3">3</span> ${fmtShort(S.over3)}원은 기타소득세 16.5%`);
     al.push(['warn', `<b>${firstOver.age}세${S.overYears > 1 ? `부터 ${S.overYears}년간` : '에'} 수령한도를 넘었어요.</b> 넘은 ${fmtShort(S.overAmount)}원은 연금외수령이라 연금 세제 혜택 없이 과세됩니다${ov.length ? ' — ' + ov.join(', ') : ''}. 받는 기간을 늘리거나 첫해 금액을 줄여 보세요.`]);
   } else al.push(['ok', '<b>모든 해에 수령한도 안에서 받습니다.</b> 연금 세제 혜택을 그대로 누려요.']);
+  // 계좌가 바닥나는 나이 (마지막 해 뒤 남은 돈이 없을 때) — 맨 위에 보여 준다
+  if (rows.length && S.leftover < 10000 && lastAge < 90) {
+    const goalAge = 90;
+    const need = levelPayment(total0, p.r, goalAge - p.startAge + 1);
+    const lever = `매년 같은 금액으로 <b>${goalAge}세까지</b> 받으려면 연 <b>${fmtMan(need)}</b>(월 ${fmtMan(need / 12)}, 세전)으로 맞춰야 합니다 (수익률 ${(p.r * 100).toFixed(1)}% 가정).`;
+    if (p.mode === 'years') {
+      al.unshift(['info', `<b>${p.years}년 나눠 받기라 만 ${lastAge}세에 이 계좌 돈을 다 씁니다.</b> ${lastAge + 1}세부터는 공적연금·다른 자산으로 생활해야 해요. ${lever}`]);
+    } else {
+      al.unshift(['warn', `<b>지금 금액으로 받으면 만 ${lastAge}세에 계좌가 바닥납니다.</b> ${lastAge + 1}세부터는 이 계좌에서 받을 돈이 없어요. ${lever}`]);
+    }
+  }
   if (S.highYears) {
     const fh = rows.find(r => r.p3 > RULE.SEP_LIMIT);
     al.push(['warn', `<b>${fh.age}세부터 ${S.highYears}년간 <span class="bn n3">3</span>에서 받는 돈이 1,500만원을 넘어요.</b> 이 해에는 전액이 종합과세 또는 16.5% 분리과세 대상이며, 계산기가 둘 중 세금이 적은 쪽(종합과세 ${S.compYears}년·분리과세 ${S.sepYears}년)을 골랐습니다.${S.compYears ? ' 종합과세를 고르면 다음 해 5월에 종합소득세 신고를 해야 해요.' : ''}`]);
@@ -1565,11 +1667,42 @@ function render() {
       <td>${fmtT(r.taxRetire)}</td><td>${fmtT(r.taxPension)}</td><td>${fmtT(r.taxOther)}</td><td class="tax">${fmtT(r.tax)}</td><td class="method">${m}</td><td><b>${fmtT(r.net)}</b></td></tr>`;
   }).join('');
 
+  lastExport = { rows, list };
   renderCap(p, list, mine);
   renderSplit(p, mine);
   renderInsight(p, list, mine, lump);
   renderCharts(list, rows);
 }
+
+// ===== 표 내려받기 (원 단위 숫자) =====
+let lastExport = null;
+function exportYearRows(rows) {
+  const R = v => Math.round(v || 0);
+  const out = [['수령연차', '나이', '연초 잔액', '수령한도', '인출액', '① 비과세', '② 퇴직금', '③ 연금소득', '한도 초과', '퇴직소득세', '연금소득세', '기타소득세', '세금 합계', '③ 과세 방식', '세후 수령', '연말 잔액']];
+  rows.forEach(r => out.push([r.n, r.age, R(r.startBal), r.limit === Infinity ? '제한 없음' : R(r.limit), R(r.w), R(r.from1), R(r.from2), R(r.from3), R(r.over),
+    R(r.taxRetire), R(r.taxPension), R(r.taxOther), R(r.tax), r.method, R(r.net), R(r.endBal)]));
+  return out;
+}
+function exportCmpRows(list) {
+  const out = [['받는 방법', '기간(년)', '시작 나이', '마지막 나이', '받은 돈(세전)', '세금', '실효세율(%)', '월평균 세후', '한도 초과 햇수']];
+  list.forEach(s => {
+    const u = s.res.sum, rs = s.res.rows;
+    out.push([s.name + (s.mine && s.name !== '내 계획' ? ' (내 계획)' : ''), s.key === 'lump' ? 1 : rs.length, rs[0]?.age ?? '', rs[rs.length - 1]?.age ?? '',
+      Math.round(u.withdrawn), Math.round(u.tax), Math.round(u.effRate * 10000) / 100, s.key === 'lump' ? '' : Math.round(u.net / u.years / 12), s.key === 'lump' ? '전액' : u.overYears]);
+  });
+  return out;
+}
+document.addEventListener('click', e => {
+  const id = e.target && e.target.id;
+  if (!lastExport || (id !== 'dl-csv' && id !== 'dl-xlsx')) return;
+  e.preventDefault();
+  const name = '연금인출_세금_연도별';
+  if (id === 'dl-csv') TJX.csv(name, exportYearRows(lastExport.rows));
+  else TJX.xlsx(name, [
+    { name: '내 계획 연도별', rows: exportYearRows(lastExport.rows), widths: [9, 7, 14, 13, 13, 12, 12, 12, 12, 12, 12, 12, 12, 15, 13, 14] },
+    { name: '받는 방법 비교', rows: exportCmpRows(lastExport.list), widths: [36, 9, 9, 10, 15, 13, 11, 13, 13] },
+  ]);
+});
 
 function renderCap(p, list, mine) {
   const total0 = p.b1 + p.b2 + p.b3;
