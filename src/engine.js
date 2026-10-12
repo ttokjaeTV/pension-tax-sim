@@ -85,7 +85,7 @@ function levelPayment(balance, r, n) {
 /*
  p = {
    startAge, eligAge, pre2013,
-   b1, b2, retTaxNat, b3,      // ① 과세제외 ② 이연퇴직소득(+퇴직소득세 국세) ③ 세액공제분+수익
+   b1, b2, retTaxNat, b3,      // ① 과세제외 ② 이연퇴직소득(+퇴직소득세 국세) ③ 세액공제 받은 원금+수익
    r,                           // 연 운용수익률
    mode: 'years' | 'amount' | 'lump' | 'cap' | 'split',
    desired,                     // split 모드: 매년 받고 싶은 금액
@@ -158,8 +158,8 @@ function simulate(p) {
       w = Math.min(take12 + take3, limit);              // 수령한도 안에서만
     }
     else if (p.mode === 'split') {
-      // 계좌 나눠 쓰기: ③(세액공제분 계좌)에서 매년 capAmount까지 꽉 채우고,
-      // 부족분은 ①(공제 안 받은 돈) → ②(퇴직금) 계좌에서 보충. ①②는 1,500만원 계산에서 빠짐.
+      // 계좌 나누기: ③(세액공제 받은 원금 계좌)에서 매년 capAmount까지 꽉 채우고,
+      // 부족분은 ①(세액공제 받지 않은 원금) → ②(퇴직금) 계좌에서 보충. ①②는 1,500만원 계산에서 빠짐.
       const cap = Math.min(RULE.SEP_LIMIT, Math.max(0, p.capAmount));
       const want = Math.max(100000, p.desired || 0);
       let t3 = Math.min(b3, cap, want);
@@ -193,7 +193,7 @@ function simulate(p) {
 
     // 세금
     const tRet = pen.b2 * retRate * retireFactor(n) * RULE.LOCAL + out.b2 * retRate * RULE.LOCAL;
-    const p3 = pen.b3; // 1,500만원 판정 대상 (세액공제분+수익의 연금수령분)
+    const p3 = pen.b3; // 1,500만원 판정 대상 (세액공제 받은 원금+수익의 연금수령분)
     let tPen = 0, method = '-';
     let lowFlag = false, highFlag = false;
     if (p3 > 0) {

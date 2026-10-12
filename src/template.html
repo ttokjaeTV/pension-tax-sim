@@ -375,6 +375,12 @@
     .grid-4 { grid-template-columns: 1fr; }
     .taxmap { grid-template-columns: 1fr; }
   }
+
+  /* 표 내려받기 (CSV·엑셀) */
+  .dl-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0 0 12px; }
+  .dl-btn { font-family: inherit; font-size: 13px; font-weight: 700; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--accent, #D9542B); background: #FBF7F0; color: var(--accent, #D9542B); cursor: pointer; line-height: 1.2; }
+  .dl-btn:hover { background: var(--accent, #D9542B); color: #fff; }
+  .dl-note { font-size: 12px; color: #8B7B6B; font-weight: 600; word-break: keep-all; }
 </style>
 </head>
 <body>
@@ -443,7 +449,7 @@
               <div class="how-t">무엇을 보나요?</div>
               <p>이 서류에는 <b>지금까지 세액공제를 받은 금액</b>이 연도별로 나옵니다. 맨 아래 <span class="mark">⑧ 공제금액 잔액</span>을 보세요.</p>
               <div class="formula-box">
-                <div><span class="bn n1">1</span> 세액공제 안 받은 돈</div>
+                <div><span class="bn n1">1</span> 세액공제 받지 않은 원금</div>
                 <div class="eq">= 내가 직접 넣은 원금 합계 − ⑧ 잔액</div>
                 <small>'내가 직접 넣은 원금'은 증권사 앱의 연금계좌 <b>납입원금(입금 누계)</b>에서 퇴직금 이체분을 뺀 금액이에요.</small>
               </div>
@@ -525,7 +531,7 @@
               </ol>
               <div class="how-t">무엇을 넣나요?</div>
               <div class="formula-box">
-                <div><span class="bn n3">3</span> 세액공제 받은 돈 + 수익</div>
+                <div><span class="bn n3">3</span> 세액공제 받은 원금 + 수익</div>
                 <div class="eq">= 총평가액 − <span class="bn n1">1</span> − <span class="bn n2">2</span></div>
                 <small><span class="bn n3">3</span> 바구니에서 '총평가액으로 계산'을 고르면 자동으로 빼 드려요.</small>
               </div>
@@ -545,15 +551,15 @@
 
         <div class="guide-foot">
           <button type="button" class="btn-fill" id="fill-example">이 예시 숫자로 채워보기</button>
-          <div class="guide-warn"><b>꼭 알아두세요</b> · 세액공제 안 받은 돈(<span class="bn n1">1</span>)은 금융회사가 따로 관리하고 있어야 세금 없이 인출돼요. 연금 개시 전에 금융회사에 확인하고, 필요하면 서류 1을 제출해 '과세제외금액'으로 등록해 두세요. 등록하지 않으면 <span class="bn n3">3</span>로 취급되어 연금소득세가 붙을 수 있습니다.</div>
+          <div class="guide-warn"><b>꼭 알아두세요</b> · 세액공제 받지 않은 원금(<span class="bn n1">1</span>)은 금융회사가 따로 관리하고 있어야 세금 없이 인출돼요. 연금 개시 전에 금융회사에 확인하고, 필요하면 서류 1을 제출해 '과세제외금액'으로 등록해 두세요. 등록하지 않으면 <span class="bn n3">3</span>로 취급되어 연금소득세가 붙을 수 있습니다.</div>
         </div>
       </div>
     </details>
 
     <div class="buckets">
       <div class="bucket" style="--c: var(--b1);">
-        <div class="bucket-head"><span class="bucket-num">1</span><span class="bucket-name">세액공제 안 받은 돈</span></div>
-        <div class="bucket-ex">세액공제 한도를 넘겨 넣은 돈, ISA 만기 이전분 중 공제 안 받은 금액 등</div>
+        <div class="bucket-head"><span class="bucket-num">1</span><span class="bucket-name">세액공제 받지 않은 원금</span></div>
+        <div class="bucket-ex">세액공제 한도를 넘겨 넣은 돈, ISA 만기 이전분 중 세액공제 받지 않은 금액 등</div>
         <span class="bucket-tax">꺼낼 때 세금 0원</span>
         <div class="mini-toggle" id="b1-mode">
           <button type="button" data-v="direct" class="on">금액 바로 입력</button>
@@ -596,7 +602,7 @@
       </div>
       <div class="bucket-arrow">→</div>
       <div class="bucket" style="--c: var(--b3);">
-        <div class="bucket-head"><span class="bucket-num">3</span><span class="bucket-name">세액공제 받은 돈 + 수익</span></div>
+        <div class="bucket-head"><span class="bucket-num">3</span><span class="bucket-name">세액공제 받은 원금 + 수익</span></div>
         <div class="bucket-ex">연말정산 때 세액공제 받은 납입금, 그리고 계좌에서 불어난 모든 수익</div>
         <span class="bucket-tax">연금소득세 3.3~5.5%</span>
         <div class="mini-toggle" id="b3-mode">
@@ -651,7 +657,7 @@
         </div>
         <div style="margin-top:10px; display:none;" id="cap-wrap">
           <div class="mini-toggle" id="cap-style" style="margin-top:0;">
-            <button type="button" data-v="split" class="on">계좌 나눠 받기</button>
+            <button type="button" data-v="split" class="on">계좌 나누기</button>
             <button type="button" data-v="seq">순서대로 받기</button>
           </div>
           <label class="label" id="phase1-label">매년 받고 싶은 금액 (연)</label>
@@ -930,11 +936,11 @@
     </div>
   </div>
 
-  <!-- 희망 금액 나눠 받기 설계 -->
+  <!-- 희망 금액 계좌 나누기 설계 -->
   <div class="card split-card" id="split-card">
     <div class="step-label"><div class="step-line"></div><span class="step-text">1,500만원 + α 설계</span></div>
-    <div class="step-title">1년에 1,500만원보다 더 필요하다면? 바구니를 나눠 쓰세요</div>
-    <div class="step-desc"><span class="bn n1">1</span> 세액공제 안 받은 돈과 <span class="bn n2">2</span> 퇴직금은 <b>1,500만원 계산에 들어가지 않아요.</b> 그래서 <span class="bn n3">3</span>에서는 매년 1,500만원을 꽉 채워 받고, 모자란 만큼만 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서 보충하면 원하는 금액을 받으면서도 저율 3.3~5.5%를 지킬 수 있어요.</div>
+    <div class="step-title">1년에 1,500만원보다 더 필요하다면? 계좌를 나누세요</div>
+    <div class="step-desc"><span class="bn n1">1</span> 세액공제 받지 않은 원금과 <span class="bn n2">2</span> 퇴직금은 <b>1,500만원 계산에 들어가지 않아요.</b> 그래서 <span class="bn n3">3</span>에서는 매년 1,500만원을 꽉 채워 받고, 모자란 만큼만 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서 보충하면 원하는 금액을 받으면서도 저율 3.3~5.5%를 지킬 수 있어요.</div>
 
     <div class="split-input">
       <div>
@@ -965,7 +971,7 @@
       </summary>
       <div class="table-wrap">
         <table class="data-table" id="split-table">
-          <thead><tr><th>나이</th><th><span class="bn n3">3</span> 세액공제분</th><th><span class="bn n1">1</span> 비과세</th><th><span class="bn n2">2</span> 퇴직금</th><th>합계</th><th>세금</th><th>세후</th></tr></thead>
+          <thead><tr><th>나이</th><th><span class="bn n3">3</span> 세액공제 받은 원금·수익</th><th><span class="bn n1">1</span> 세액공제 받지 않은 원금</th><th><span class="bn n2">2</span> 퇴직금</th><th>합계</th><th>세금</th><th>세후</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -976,12 +982,12 @@
       <div class="how-card">
         <div class="how-no">방법 A</div>
         <div class="how-t">퇴직금 IRP와 연금저축을 <b>동시에</b> 개시</div>
-        <div class="how-d">꺼내는 순서(<span class="bn n1">1</span>→<span class="bn n2">2</span>→<span class="bn n3">3</span>)는 <b>계좌마다 따로</b> 적용돼요. 퇴직금(<span class="bn n2">2</span>)은 IRP에, 세액공제 받은 돈(<span class="bn n3">3</span>)은 연금저축에 따로 있다면 <b>연금저축에서 연 1,500만원, IRP에서 부족분</b>을 받으면 됩니다.</div>
+        <div class="how-d">꺼내는 순서(<span class="bn n1">1</span>→<span class="bn n2">2</span>→<span class="bn n3">3</span>)는 <b>계좌마다 따로</b> 적용돼요. 퇴직금(<span class="bn n2">2</span>)은 IRP에, 세액공제 받은 원금(<span class="bn n3">3</span>)은 연금저축에 따로 있다면 <b>연금저축에서 연 1,500만원, IRP에서 부족분</b>을 받으면 됩니다.</div>
       </div>
       <div class="how-card">
         <div class="how-no">방법 B</div>
         <div class="how-t"><span class="bn n1">1</span>이 연금저축에 섞여 있다면 <b>미리 빼 두기</b></div>
-        <div class="how-d">한 계좌 안에서는 <span class="bn n1">1</span>이 먼저 빠져서 <span class="bn n3">3</span>을 꽉 채울 수 없어요. 연금 개시 전에 연금저축에서 <span class="bn n1">1</span> 금액만큼만 인출하면 세금이 없어요(금융회사에 과세제외금액으로 등록돼 있어야 해요). 이 돈을 예금·ISA 같은 <b>'보충 통장'</b>에 두고 매년 부족분을 꺼내 쓰세요. 단, <b>IRP는 법에서 정한 사유가 있을 때만</b> 중간에 일부를 뺄 수 있고, <span class="bn n1">1</span>보다 많이 빼면 넘은 부분에 세금이 붙어요 — 퇴직금(<span class="bn n2">2</span>)에서 나가면 퇴직소득세 100%, 세액공제분·수익(<span class="bn n3">3</span>)에서 나가면 16.5%예요.</div>
+        <div class="how-d">한 계좌 안에서는 <span class="bn n1">1</span>이 먼저 빠져서 <span class="bn n3">3</span>을 꽉 채울 수 없어요. 연금 개시 전에 연금저축에서 <span class="bn n1">1</span> 금액만큼만 인출하면 세금이 없어요(금융회사에 과세제외금액으로 등록돼 있어야 해요). 이 돈을 예금·ISA 같은 <b>'보충 계좌'</b>에 두고 매년 부족분을 꺼내 쓰세요. 단, <b>IRP는 법에서 정한 사유가 있을 때만</b> 중간에 일부를 뺄 수 있고, <span class="bn n1">1</span>보다 많이 빼면 넘은 부분에 세금이 붙어요 — 퇴직금(<span class="bn n2">2</span>)에서 나가면 퇴직소득세 100%, 세액공제 받은 원금·수익(<span class="bn n3">3</span>)에서 나가면 16.5%예요.</div>
       </div>
       <div class="how-card">
         <div class="how-no">방법 C</div>
@@ -1028,11 +1034,16 @@
         <span class="chart-title" style="font-size:16px;">연도별 상세표</span>
         <span class="fold-btn"><span class="open-txt">펼치기 ▾</span><span class="close-txt">접기 ▴</span></span>
       </summary>
+      <div class="dl-bar" style="margin-top:12px;">
+        <button type="button" class="dl-btn" id="dl-csv">CSV 내려받기</button>
+        <button type="button" class="dl-btn" id="dl-xlsx">엑셀(.xlsx) 내려받기</button>
+        <span class="dl-note">내 계획의 연도별 표 + 받는 방법 비교표 (원 단위 숫자)</span>
+      </div>
       <div class="table-wrap">
         <table class="data-table yr-table" id="yr-table">
           <thead><tr>
             <th>수령연차</th><th>나이</th><th>연초 잔액</th><th>수령한도</th><th>인출액</th>
-            <th><span class="bn n1">1</span> 비과세</th><th><span class="bn n2">2</span> 퇴직금</th><th><span class="bn n3">3</span> 연금소득</th><th>한도 초과</th>
+            <th><span class="bn n1">1</span> 세액공제 받지 않은 원금</th><th><span class="bn n2">2</span> 퇴직금</th><th><span class="bn n3">3</span> 세액공제 받은 원금·수익</th><th>한도 초과</th>
             <th>퇴직소득세</th><th>연금소득세</th><th>기타소득세</th><th>세금 합계</th><th><span class="bn n3">3</span> 과세 방식</th><th>세후 수령</th>
           </tr></thead>
           <tbody></tbody>
@@ -1058,14 +1069,14 @@
         <div class="rule"><div class="rule-no">RULE 02 · 얼마까지</div><div class="rule-title">해마다 연금수령한도</div>
           <div class="rule-body"><span class="formula">연초 계좌 평가액 ÷ (11 − 연금수령연차) × 120%</span>
           한도를 넘겨 꺼낸 돈은 '연금외수령'이 되어 혜택이 사라집니다. <b>11년차부터는 한도가 없어요.</b> 2013년 3월 이전 가입자는 6년차부터 시작합니다.</div></div>
-        <div class="rule"><div class="rule-no">RULE 03 · 어떤 순서로</div><div class="rule-title"><span class="bn n1">1</span> 비과세 → <span class="bn n2">2</span> 퇴직금 → <span class="bn n3">3</span> 연금소득</div>
+        <div class="rule"><div class="rule-no">RULE 03 · 어떤 순서로</div><div class="rule-title"><span class="bn n1">1</span> 세액공제 받지 않은 원금 → <span class="bn n2">2</span> 퇴직금 → <span class="bn n3">3</span> 세액공제 받은 원금·수익</div>
           <div class="rule-body">꺼내는 순서는 고를 수 없고 법으로 정해져 있어요. 그래서 개시 초반에는 대부분 <span class="bn n1">1</span>·<span class="bn n2">2</span>가 빠져나가고, <b><span class="bn n3">3</span>에 대한 연금소득세는 뒤쪽에 몰립니다.</b></div></div>
         <div class="rule"><div class="rule-no">RULE 04 · 세금은</div><div class="rule-title">바구니 × 한도 안/밖</div>
           <div class="rule-body"><table class="mini-tbl">
             <tr><th>바구니</th><th>한도 안 (연금수령)</th><th>한도 밖 (연금외수령)</th></tr>
-            <tr><td><span class="bn n1">1</span> 비과세</td><td>0원</td><td>0원</td></tr>
+            <tr><td><span class="bn n1">1</span> 세액공제 받지 않은 원금</td><td>0원</td><td>0원</td></tr>
             <tr><td><span class="bn n2">2</span> 퇴직금</td><td>퇴직소득세의 70·60·50%</td><td>퇴직소득세 100%</td></tr>
-            <tr><td><span class="bn n3">3</span> 연금소득</td><td>5.5·4.4·3.3%</td><td>기타소득세 16.5%</td></tr>
+            <tr><td><span class="bn n3">3</span> 세액공제 받은 원금·수익</td><td>5.5·4.4·3.3%</td><td>기타소득세 16.5%</td></tr>
           </table></div></div>
         <div class="rule"><div class="rule-no">RULE 05 · 퇴직금 감면</div><div class="rule-title">오래 받을수록 세금이 줄어요</div>
           <div class="rule-body">퇴직금을 연금으로 받으면 퇴직소득세를 <b>1~10년차 30%, 11~20년차 40%, 21년차부터 50%</b> 깎아 줍니다(50% 구간은 2026년 1월 이후 수령분부터). 이때 연차는 <b>실제로 연금을 받은 해만</b> 셉니다.</div></div>
@@ -1105,6 +1116,86 @@
 </div>
 
 <script>
+// ============== 표 내려받기 (CSV · 엑셀 .xlsx) — 외부 라이브러리 없이 동작 ==============
+// TJX.csv('파일이름', rows) · TJX.xlsx('파일이름', [{ name: '시트', rows, widths }])
+// rows = [[머리글...], [값...], ...]  숫자는 숫자 그대로 넣으면 엑셀에서 계산 가능한 숫자 칸이 됩니다
+const TJX = (() => {
+  const enc = new TextEncoder();
+  function csvText(rows) {
+    return '﻿' + rows.map(r => r.map(v => {
+      if (v == null) return '';
+      if (typeof v === 'number') return isFinite(v) ? String(Math.round(v * 100) / 100) : '';
+      const t = String(v);
+      return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+    }).join(',')).join('\r\n');
+  }
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zipStore(files) {   // 압축 없이 묶기 (엑셀은 이 형식도 그대로 엽니다)
+    const parts = [], central = []; let off = 0;
+    for (const f of files) {
+      const nm = enc.encode(f.name), d = enc.encode(f.text), c = crc32(d);
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+      lh.setUint16(12, 0x21, true); lh.setUint32(14, c, true); lh.setUint32(18, d.length, true); lh.setUint32(22, d.length, true);
+      lh.setUint16(26, nm.length, true);
+      parts.push(new Uint8Array(lh.buffer), nm, d);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+      ch.setUint16(14, 0x21, true); ch.setUint32(16, c, true); ch.setUint32(20, d.length, true); ch.setUint32(24, d.length, true);
+      ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+      central.push(new Uint8Array(ch.buffer), nm);
+      off += 30 + nm.length + d.length;
+    }
+    const cs = central.reduce((s, a) => s + a.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cs, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const colName = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  function sheetXml(sh) {
+    const rows = sh.rows || [];
+    const nCol = rows.reduce((m, r) => Math.max(m, r.length), 1);
+    const widths = sh.widths || [];
+    const cols = Array.from({ length: nCol }, (_, i) => `<col min="${i + 1}" max="${i + 1}" width="${widths[i] || (i === 0 ? 12 : 16)}" customWidth="1"/>`).join('');
+    const body = rows.map((r, ri) => `<row r="${ri + 1}">` + r.map((v, ci) => {
+      const ref = colName(ci) + (ri + 1);
+      if (v == null || v === '') return '';
+      if (typeof v === 'number' && isFinite(v)) {
+        const st = ri === 0 ? 2 : (Math.abs(v - Math.round(v)) < 1e-9 ? 1 : 3);
+        return `<c r="${ref}" s="${st}"><v>${Math.round(v * 10000) / 10000}</v></c>`;
+      }
+      return `<c r="${ref}" t="inlineStr"${ri === 0 ? ' s="2"' : ''}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+    }).join('') + '</row>').join('');
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${cols}</cols><sheetData>${body}</sheetData></worksheet>`;
+  }
+  function xlsxBlob(sheets) {
+    const W = 'http://schemas.openxmlformats.org';
+    const files = [
+      { name: '[Content_Types].xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="${W}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>` },
+      { name: '_rels/.rels', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${W}/package/2006/relationships"><Relationship Id="rId1" Type="${W}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+      { name: 'xl/workbook.xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${W}/spreadsheetml/2006/main" xmlns:r="${W}/officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${esc(String(s.name || 'Sheet' + (i + 1)).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>` },
+      { name: 'xl/_rels/workbook.xml.rels', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${W}/package/2006/relationships">${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="${W}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="${W}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+      { name: 'xl/styles.xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="${W}/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` },
+      ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, text: sheetXml(s) })),
+    ];
+    return zipStore(files);
+  }
+  function save(blob, name) {
+    const a = document.createElement('a'), u = URL.createObjectURL(blob);
+    a.href = u; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 1500);
+  }
+  const stamp = () => { const d = new Date(); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`; };
+  return {
+    csvText, xlsxBlob,
+    csv(name, rows) { save(new Blob([csvText(rows)], { type: 'text/csv;charset=utf-8' }), `${name}_${stamp()}.csv`); },
+    xlsx(name, sheets) { save(xlsxBlob(sheets), `${name}_${stamp()}.xlsx`); },
+  };
+})();
+
 /*__ENGINE__*/
 
 /* ===== UI ===== */
@@ -1176,7 +1267,7 @@ function readParams() {
 }
 
 function updateHints(p) {
-  $('b1-hint').innerHTML = state.b1Mode === 'doc' ? `<span class="bn n1">1</span> 세액공제 안 받은 돈 = <b>${fmtMan(p.b1)}</b>` : fmtMan(p.b1);
+  $('b1-hint').innerHTML = state.b1Mode === 'doc' ? `<span class="bn n1">1</span> 세액공제 받지 않은 원금 = <b>${fmtMan(p.b1)}</b>` : fmtMan(p.b1);
   $('b2-hint').textContent = fmtMan(p.b2);
   $('b3-hint').innerHTML = state.b3Mode === 'total'
     ? (p._b3neg ? '<b>총평가액이 1·2 바구니 합계보다 작아요.</b> 숫자를 다시 확인해 주세요.' : `총평가액 − 1 − 2 = <b>${fmtMan(p.b3)}</b>`)
@@ -1214,7 +1305,7 @@ function strategies(p) {
   const W = (p.mode === 'cap' || p.mode === 'split') ? p.phase1Amount : Math.round(firstW / 10000) * 10000;
   if (p.mode === 'cap' || p.mode === 'split') list.push({ key: 'same', name: '같은 금액 계속 받기', p: { ...p, mode: 'amount', amount: Math.max(100000, W) } });
   if (p.mode !== 'cap') list.push({ key: 'cap', name: '1,500만원 맞춤', p: { ...p, mode: 'cap', phase1Amount: W, capAmount: 15000000 } });
-  if (p.mode !== 'split') list.push({ key: 'split', name: '계좌 나눠 받기', p: { ...p, mode: 'split', desired: W, capAmount: 15000000 } });
+  if (p.mode !== 'split') list.push({ key: 'split', name: '계좌 나누기', p: { ...p, mode: 'split', desired: W, capAmount: 15000000 } });
   const mine = { key: 'mine', name: '내 계획', p: { ...p }, mine: true, res: mineRes };
   list.push(mine);
   list.forEach(s => { if (!s.res) s.res = simulate(s.p); });
@@ -1232,7 +1323,7 @@ function render() {
   const lastAge = rows.length ? rows[rows.length - 1].age : p.startAge;
 
   $('plan-desc').textContent = total0 > 0
-    ? `총 ${fmtMan(total0)}을 ${p.startAge}세부터 ${rows.length}년간(${p.startAge}~${lastAge}세) 받는 경우` + (S.leftover > 10000 ? ` · 100세에 ${fmtMan(S.leftover)}이 남아요` : '') + (p.mode === 'split' ? ' · 계좌 나눠 받기(3은 연 1,500만원까지, 부족분은 1·2에서)' : '')
+    ? `총 ${fmtMan(total0)}을 ${p.startAge}세부터 ${rows.length}년간(${p.startAge}~${lastAge}세) 받는 경우` + (S.leftover > 10000 ? ` · 100세에 ${fmtMan(S.leftover)}이 남아요` : '') + (p.mode === 'split' ? ' · 계좌 나누기(3은 연 1,500만원까지, 부족분은 1·2에서)' : '')
     : '금액을 입력해 주세요.';
 
   // 카드
@@ -1265,6 +1356,17 @@ function render() {
     if (S.over3 > 0.5) ov.push(`<span class="bn n3">3</span> ${fmtShort(S.over3)}원은 기타소득세 16.5%`);
     al.push(['warn', `<b>${firstOver.age}세${S.overYears > 1 ? `부터 ${S.overYears}년간` : '에'} 수령한도를 넘었어요.</b> 넘은 ${fmtShort(S.overAmount)}원은 연금외수령이라 연금 세제 혜택 없이 과세됩니다${ov.length ? ' — ' + ov.join(', ') : ''}. 받는 기간을 늘리거나 첫해 금액을 줄여 보세요.`]);
   } else al.push(['ok', '<b>모든 해에 수령한도 안에서 받습니다.</b> 연금 세제 혜택을 그대로 누려요.']);
+  // 계좌가 바닥나는 나이 (마지막 해 뒤 남은 돈이 없을 때) — 맨 위에 보여 준다
+  if (rows.length && S.leftover < 10000 && lastAge < 90) {
+    const goalAge = 90;
+    const need = levelPayment(total0, p.r, goalAge - p.startAge + 1);
+    const lever = `매년 같은 금액으로 <b>${goalAge}세까지</b> 받으려면 연 <b>${fmtMan(need)}</b>(월 ${fmtMan(need / 12)}, 세전)으로 맞춰야 합니다 (수익률 ${(p.r * 100).toFixed(1)}% 가정).`;
+    if (p.mode === 'years') {
+      al.unshift(['info', `<b>${p.years}년 나눠 받기라 만 ${lastAge}세에 이 계좌 돈을 다 씁니다.</b> ${lastAge + 1}세부터는 공적연금·다른 자산으로 생활해야 해요. ${lever}`]);
+    } else {
+      al.unshift(['warn', `<b>지금 금액으로 받으면 만 ${lastAge}세에 계좌가 바닥납니다.</b> ${lastAge + 1}세부터는 이 계좌에서 받을 돈이 없어요. ${lever}`]);
+    }
+  }
   if (S.highYears) {
     const fh = rows.find(r => r.p3 > RULE.SEP_LIMIT);
     al.push(['warn', `<b>${fh.age}세부터 ${S.highYears}년간 <span class="bn n3">3</span>에서 받는 돈이 1,500만원을 넘어요.</b> 이 해에는 전액이 종합과세 또는 16.5% 분리과세 대상이며, 계산기가 둘 중 세금이 적은 쪽(종합과세 ${S.compYears}년·분리과세 ${S.sepYears}년)을 골랐습니다.${S.compYears ? ' 종합과세를 고르면 다음 해 5월에 종합소득세 신고를 해야 해요.' : ''}`]);
@@ -1314,11 +1416,42 @@ function render() {
       <td>${fmtT(r.taxRetire)}</td><td>${fmtT(r.taxPension)}</td><td>${fmtT(r.taxOther)}</td><td class="tax">${fmtT(r.tax)}</td><td class="method">${m}</td><td><b>${fmtT(r.net)}</b></td></tr>`;
   }).join('');
 
+  lastExport = { rows, list };
   renderCap(p, list, mine);
   renderSplit(p, mine);
   renderInsight(p, list, mine, lump);
   renderCharts(list, rows);
 }
+
+// ===== 표 내려받기 (원 단위 숫자) =====
+let lastExport = null;
+function exportYearRows(rows) {
+  const R = v => Math.round(v || 0);
+  const out = [['수령연차', '나이', '연초 잔액', '수령한도', '인출액', '① 비과세', '② 퇴직금', '③ 연금소득', '한도 초과', '퇴직소득세', '연금소득세', '기타소득세', '세금 합계', '③ 과세 방식', '세후 수령', '연말 잔액']];
+  rows.forEach(r => out.push([r.n, r.age, R(r.startBal), r.limit === Infinity ? '제한 없음' : R(r.limit), R(r.w), R(r.from1), R(r.from2), R(r.from3), R(r.over),
+    R(r.taxRetire), R(r.taxPension), R(r.taxOther), R(r.tax), r.method, R(r.net), R(r.endBal)]));
+  return out;
+}
+function exportCmpRows(list) {
+  const out = [['받는 방법', '기간(년)', '시작 나이', '마지막 나이', '받은 돈(세전)', '세금', '실효세율(%)', '월평균 세후', '한도 초과 햇수']];
+  list.forEach(s => {
+    const u = s.res.sum, rs = s.res.rows;
+    out.push([s.name + (s.mine && s.name !== '내 계획' ? ' (내 계획)' : ''), s.key === 'lump' ? 1 : rs.length, rs[0]?.age ?? '', rs[rs.length - 1]?.age ?? '',
+      Math.round(u.withdrawn), Math.round(u.tax), Math.round(u.effRate * 10000) / 100, s.key === 'lump' ? '' : Math.round(u.net / u.years / 12), s.key === 'lump' ? '전액' : u.overYears]);
+  });
+  return out;
+}
+document.addEventListener('click', e => {
+  const id = e.target && e.target.id;
+  if (!lastExport || (id !== 'dl-csv' && id !== 'dl-xlsx')) return;
+  e.preventDefault();
+  const name = '연금인출_세금_연도별';
+  if (id === 'dl-csv') TJX.csv(name, exportYearRows(lastExport.rows));
+  else TJX.xlsx(name, [
+    { name: '내 계획 연도별', rows: exportYearRows(lastExport.rows), widths: [9, 7, 14, 13, 13, 12, 12, 12, 12, 12, 12, 12, 12, 15, 13, 14] },
+    { name: '받는 방법 비교', rows: exportCmpRows(lastExport.list), widths: [36, 9, 9, 10, 15, 13, 11, 13, 13] },
+  ]);
+});
 
 function renderCap(p, list, mine) {
   const total0 = p.b1 + p.b2 + p.b3;
@@ -1371,7 +1504,7 @@ function renderCap(p, list, mine) {
   if (ph12.length) {
     const a0 = ph12[0].age, a1 = ph12[ph12.length - 1].age;
     steps.push(['1단계', `<em>${a0}~${a1}세 (${ph12.length}년)</em> · <span class="bn n1">1</span><span class="bn n2">2</span> 바구니 구간은 필요한 만큼`,
-      `개시 직후에는 법에 정해진 순서대로 <span class="bn n1">1</span> 비과세 → <span class="bn n2">2</span> 퇴직금이 먼저 나가요. 이 돈은 <b>1,500만원 계산에 들어가지 않아서</b> 수령한도 안이라면 연 ${fmtMan(isCap ? p.phase1Amount : capS.p.phase1Amount)}을 받아도 괜찮아요.` +
+      `개시 직후에는 법에 정해진 순서대로 <span class="bn n1">1</span> 세액공제 받지 않은 원금 → <span class="bn n2">2</span> 퇴직금이 먼저 나가요. 이 돈은 <b>1,500만원 계산에 들어가지 않아서</b> 수령한도 안이라면 연 ${fmtMan(isCap ? p.phase1Amount : capS.p.phase1Amount)}을 받아도 괜찮아요.` +
       (p.b2 > 0 ? ` 퇴직금은 오래 나눌수록 감면이 커지지만(30→40→50%), 내 퇴직소득세율 ${pct(retRate)} 기준 감면 10%p 차이는 퇴직금 1억원당 약 ${fmtMan(1e8 * retRate * 0.1)}이라 1,500만원 기준을 지키는 쪽이 더 중요해요.` : '')]);
   }
   if (ph3.length) {
@@ -1422,8 +1555,8 @@ function renderSplit(p, mine) {
 
   const s3 = Math.min(CAP, want), s12 = Math.max(0, want - CAP);
   $('split-formula').innerHTML = want <= CAP
-    ? `<div class="sf-box s3"><small>3 세액공제분</small><b>${fmtShort(want)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년</small><b>${fmtShort(want)}</b></div><div style="font-size:14px;font-weight:700;color:var(--green);">1,500만원 이하라 나눠 쓸 필요가 없어요</div>`
-    : `<div class="sf-box s3"><small>3 세액공제분 (꽉 채우기)</small><b>${fmtShort(s3)}</b></div><span class="sf-op">+</span><div class="sf-box s12"><small>1·2 비과세·퇴직금 (보충)</small><b>${fmtShort(s12)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년 받는 돈</small><b>${fmtShort(want)}</b></div>`;
+    ? `<div class="sf-box s3"><small>3 세액공제 받은 원금·수익</small><b>${fmtShort(want)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년</small><b>${fmtShort(want)}</b></div><div style="font-size:14px;font-weight:700;color:var(--green);">1,500만원 이하라 계좌를 나눌 필요가 없어요</div>`
+    : `<div class="sf-box s3"><small>3 세액공제 받은 원금·수익 (꽉 채우기)</small><b>${fmtShort(s3)}</b></div><span class="sf-op">+</span><div class="sf-box s12"><small>1·2 세액공제 받지 않은 원금·퇴직금 (보충)</small><b>${fmtShort(s12)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년 받는 돈</small><b>${fmtShort(want)}</b></div>`;
 
   // 구간 묶기
   const rows = sp.rows, groups = [];
@@ -1436,7 +1569,7 @@ function renderSplit(p, mine) {
     const r0 = g.rows[0], a0 = r0.age, a1 = g.rows[g.rows.length - 1].age;
     const full = r0.w >= want - 1;
     const has1 = g.rows.some(r => r.from1 > 0.5), has2 = g.rows.some(r => r.from2 > 0.5);
-    const src12 = has1 && has2 ? '<span class="bn n1">1</span>→<span class="bn n2">2</span>' : has1 ? '<span class="bn n1">1</span> 비과세' : has2 ? '<span class="bn n2">2</span> 퇴직금' : '';
+    const src12 = has1 && has2 ? '<span class="bn n1">1</span>→<span class="bn n2">2</span>' : has1 ? '<span class="bn n1">1</span> 세액공제 받지 않은 원금' : has2 ? '<span class="bn n2">2</span> 퇴직금' : '';
     const parts = [];
     if (r0.from3 > 0.5) parts.push(`<span class="bn n3">3</span> <b>${fmtShort(r0.from3)}</b>`);
     if (r0.from1 + r0.from2 > 0.5) parts.push(`${src12} <b>${fmtShort(r0.from1 + r0.from2)}</b>`);
@@ -1448,7 +1581,7 @@ function renderSplit(p, mine) {
   // 비교
   const keep = (res) => { const k = res.rows.filter(r => r.w >= want - 10000); return k.length ? `${k.length}년 (${k[0].age}~${k[k.length - 1].age}세)` : '없음'; };
   const hi = (res) => res.rows.filter(r => r.p3 > RULE.SEP_LIMIT).length;
-  const cmp = [['그냥 같은 금액 받기', sm], ['순서대로 1,500 맞춤', cp], ['계좌 나눠 받기', sp]];
+  const cmp = [['그냥 같은 금액 받기', sm], ['순서대로 1,500 맞춤', cp], ['계좌 나누기', sp]];
   const minEff = Math.min(...cmp.filter(c => c[1].sum.withdrawn > 0).map(c => c[1].sum.effRate));
   cmp.forEach(c => { c[2] = c[1].sum.withdrawn > 0 && c[1].sum.effRate <= minEff + 5e-5 ? 'pick' : ''; });
   $('split-cmp').querySelector('tbody').innerHTML = cmp.map(([n, r, c]) => `<tr class="${c}"><td>${n}${c ? '<span class="best-badge">실효세율 최저</span>' : ''}</td><td>${keep(r)}</td><td class="${hi(r) ? 'warn' : ''}">${hi(r) ? hi(r) + '년' : '없음'}</td><td>${fmtT(r.sum.tax)}</td><td>${pct(r.sum.effRate)}</td></tr>`).join('');
@@ -1472,7 +1605,7 @@ function renderInsight(p, list, mine, lump) {
   const capS = list.find(s => s.key === 'cap');
   if (capS && capS.res.sum.effRate < S.effRate - 5e-4) tips.push(`<span class="bn n3">3</span> 바구니를 연 1,500만원 이하로 맞추는 <strong>1,500만원 맞춤 전략</strong>으로 바꾸면 실효세율이 ${pct(S.effRate)} → ${pct(capS.res.sum.effRate)}로 낮아져요. 대신 그 구간의 부족한 생활비는 연금계좌 밖에서 채워야 합니다.`);
   const spS = list.find(s => s.key === 'split');
-  if (spS && S.highYears && spS.res.sum.effRate < S.effRate - 5e-4) tips.push(`같은 금액이 필요하다면 <strong>계좌 나눠 받기</strong>(<span class="bn n3">3</span>은 연 1,500만원까지, 부족분은 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서)로 실효세율을 ${pct(S.effRate)} → ${pct(spS.res.sum.effRate)}로 낮출 수 있어요.`);
+  if (spS && S.highYears && spS.res.sum.effRate < S.effRate - 5e-4) tips.push(`같은 금액이 필요하다면 <strong>계좌 나누기</strong>(<span class="bn n3">3</span>은 연 1,500만원까지, 부족분은 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서)로 실효세율을 ${pct(S.effRate)} → ${pct(spS.res.sum.effRate)}로 낮출 수 있어요.`);
   if (best && best.key !== 'mine') tips.push(`비교한 방법 중에서는 <strong>${best.name}</strong>의 실효세율이 ${pct(best.res.sum.effRate)}로 가장 낮았어요.`);
   if (S.highYears) tips.push(`<span class="bn n3">3</span> 바구니에서 1년에 1,500만원을 넘게 받는 해가 ${S.highYears}년 있어요. 국민연금 등 다른 소득이 많다면 이 구간의 세금이 커질 수 있으니 고급 설정에 입력해 확인해 보세요.`);
   if (p.b2 > 0) tips.push(`퇴직금은 <strong>실제로 받은 해</strong>만 감면 연차로 쌓여요. 당장 돈이 필요 없어도 자격이 생기면 소액이라도 개시해 두는 게 유리합니다.`);

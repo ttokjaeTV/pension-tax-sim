@@ -449,7 +449,7 @@
               <div class="how-t">무엇을 보나요?</div>
               <p>이 서류에는 <b>지금까지 세액공제를 받은 금액</b>이 연도별로 나옵니다. 맨 아래 <span class="mark">⑧ 공제금액 잔액</span>을 보세요.</p>
               <div class="formula-box">
-                <div><span class="bn n1">1</span> 세액공제 안 받은 돈</div>
+                <div><span class="bn n1">1</span> 세액공제 받지 않은 원금</div>
                 <div class="eq">= 내가 직접 넣은 원금 합계 − ⑧ 잔액</div>
                 <small>'내가 직접 넣은 원금'은 증권사 앱의 연금계좌 <b>납입원금(입금 누계)</b>에서 퇴직금 이체분을 뺀 금액이에요.</small>
               </div>
@@ -531,7 +531,7 @@
               </ol>
               <div class="how-t">무엇을 넣나요?</div>
               <div class="formula-box">
-                <div><span class="bn n3">3</span> 세액공제 받은 돈 + 수익</div>
+                <div><span class="bn n3">3</span> 세액공제 받은 원금 + 수익</div>
                 <div class="eq">= 총평가액 − <span class="bn n1">1</span> − <span class="bn n2">2</span></div>
                 <small><span class="bn n3">3</span> 바구니에서 '총평가액으로 계산'을 고르면 자동으로 빼 드려요.</small>
               </div>
@@ -551,15 +551,15 @@
 
         <div class="guide-foot">
           <button type="button" class="btn-fill" id="fill-example">이 예시 숫자로 채워보기</button>
-          <div class="guide-warn"><b>꼭 알아두세요</b> · 세액공제 안 받은 돈(<span class="bn n1">1</span>)은 금융회사가 따로 관리하고 있어야 세금 없이 인출돼요. 연금 개시 전에 금융회사에 확인하고, 필요하면 서류 1을 제출해 '과세제외금액'으로 등록해 두세요. 등록하지 않으면 <span class="bn n3">3</span>로 취급되어 연금소득세가 붙을 수 있습니다.</div>
+          <div class="guide-warn"><b>꼭 알아두세요</b> · 세액공제 받지 않은 원금(<span class="bn n1">1</span>)은 금융회사가 따로 관리하고 있어야 세금 없이 인출돼요. 연금 개시 전에 금융회사에 확인하고, 필요하면 서류 1을 제출해 '과세제외금액'으로 등록해 두세요. 등록하지 않으면 <span class="bn n3">3</span>로 취급되어 연금소득세가 붙을 수 있습니다.</div>
         </div>
       </div>
     </details>
 
     <div class="buckets">
       <div class="bucket" style="--c: var(--b1);">
-        <div class="bucket-head"><span class="bucket-num">1</span><span class="bucket-name">세액공제 안 받은 돈</span></div>
-        <div class="bucket-ex">세액공제 한도를 넘겨 넣은 돈, ISA 만기 이전분 중 공제 안 받은 금액 등</div>
+        <div class="bucket-head"><span class="bucket-num">1</span><span class="bucket-name">세액공제 받지 않은 원금</span></div>
+        <div class="bucket-ex">세액공제 한도를 넘겨 넣은 돈, ISA 만기 이전분 중 세액공제 받지 않은 금액 등</div>
         <span class="bucket-tax">꺼낼 때 세금 0원</span>
         <div class="mini-toggle" id="b1-mode">
           <button type="button" data-v="direct" class="on">금액 바로 입력</button>
@@ -602,7 +602,7 @@
       </div>
       <div class="bucket-arrow">→</div>
       <div class="bucket" style="--c: var(--b3);">
-        <div class="bucket-head"><span class="bucket-num">3</span><span class="bucket-name">세액공제 받은 돈 + 수익</span></div>
+        <div class="bucket-head"><span class="bucket-num">3</span><span class="bucket-name">세액공제 받은 원금 + 수익</span></div>
         <div class="bucket-ex">연말정산 때 세액공제 받은 납입금, 그리고 계좌에서 불어난 모든 수익</div>
         <span class="bucket-tax">연금소득세 3.3~5.5%</span>
         <div class="mini-toggle" id="b3-mode">
@@ -657,7 +657,7 @@
         </div>
         <div style="margin-top:10px; display:none;" id="cap-wrap">
           <div class="mini-toggle" id="cap-style" style="margin-top:0;">
-            <button type="button" data-v="split" class="on">계좌 나눠 받기</button>
+            <button type="button" data-v="split" class="on">계좌 나누기</button>
             <button type="button" data-v="seq">순서대로 받기</button>
           </div>
           <label class="label" id="phase1-label">매년 받고 싶은 금액 (연)</label>
@@ -936,11 +936,11 @@
     </div>
   </div>
 
-  <!-- 희망 금액 나눠 받기 설계 -->
+  <!-- 희망 금액 계좌 나누기 설계 -->
   <div class="card split-card" id="split-card">
     <div class="step-label"><div class="step-line"></div><span class="step-text">1,500만원 + α 설계</span></div>
-    <div class="step-title">1년에 1,500만원보다 더 필요하다면? 바구니를 나눠 쓰세요</div>
-    <div class="step-desc"><span class="bn n1">1</span> 세액공제 안 받은 돈과 <span class="bn n2">2</span> 퇴직금은 <b>1,500만원 계산에 들어가지 않아요.</b> 그래서 <span class="bn n3">3</span>에서는 매년 1,500만원을 꽉 채워 받고, 모자란 만큼만 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서 보충하면 원하는 금액을 받으면서도 저율 3.3~5.5%를 지킬 수 있어요.</div>
+    <div class="step-title">1년에 1,500만원보다 더 필요하다면? 계좌를 나누세요</div>
+    <div class="step-desc"><span class="bn n1">1</span> 세액공제 받지 않은 원금과 <span class="bn n2">2</span> 퇴직금은 <b>1,500만원 계산에 들어가지 않아요.</b> 그래서 <span class="bn n3">3</span>에서는 매년 1,500만원을 꽉 채워 받고, 모자란 만큼만 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서 보충하면 원하는 금액을 받으면서도 저율 3.3~5.5%를 지킬 수 있어요.</div>
 
     <div class="split-input">
       <div>
@@ -971,7 +971,7 @@
       </summary>
       <div class="table-wrap">
         <table class="data-table" id="split-table">
-          <thead><tr><th>나이</th><th><span class="bn n3">3</span> 세액공제분</th><th><span class="bn n1">1</span> 비과세</th><th><span class="bn n2">2</span> 퇴직금</th><th>합계</th><th>세금</th><th>세후</th></tr></thead>
+          <thead><tr><th>나이</th><th><span class="bn n3">3</span> 세액공제 받은 원금·수익</th><th><span class="bn n1">1</span> 세액공제 받지 않은 원금</th><th><span class="bn n2">2</span> 퇴직금</th><th>합계</th><th>세금</th><th>세후</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -982,12 +982,12 @@
       <div class="how-card">
         <div class="how-no">방법 A</div>
         <div class="how-t">퇴직금 IRP와 연금저축을 <b>동시에</b> 개시</div>
-        <div class="how-d">꺼내는 순서(<span class="bn n1">1</span>→<span class="bn n2">2</span>→<span class="bn n3">3</span>)는 <b>계좌마다 따로</b> 적용돼요. 퇴직금(<span class="bn n2">2</span>)은 IRP에, 세액공제 받은 돈(<span class="bn n3">3</span>)은 연금저축에 따로 있다면 <b>연금저축에서 연 1,500만원, IRP에서 부족분</b>을 받으면 됩니다.</div>
+        <div class="how-d">꺼내는 순서(<span class="bn n1">1</span>→<span class="bn n2">2</span>→<span class="bn n3">3</span>)는 <b>계좌마다 따로</b> 적용돼요. 퇴직금(<span class="bn n2">2</span>)은 IRP에, 세액공제 받은 원금(<span class="bn n3">3</span>)은 연금저축에 따로 있다면 <b>연금저축에서 연 1,500만원, IRP에서 부족분</b>을 받으면 됩니다.</div>
       </div>
       <div class="how-card">
         <div class="how-no">방법 B</div>
         <div class="how-t"><span class="bn n1">1</span>이 연금저축에 섞여 있다면 <b>미리 빼 두기</b></div>
-        <div class="how-d">한 계좌 안에서는 <span class="bn n1">1</span>이 먼저 빠져서 <span class="bn n3">3</span>을 꽉 채울 수 없어요. 연금 개시 전에 연금저축에서 <span class="bn n1">1</span> 금액만큼만 인출하면 세금이 없어요(금융회사에 과세제외금액으로 등록돼 있어야 해요). 이 돈을 예금·ISA 같은 <b>'보충 통장'</b>에 두고 매년 부족분을 꺼내 쓰세요. 단, <b>IRP는 법에서 정한 사유가 있을 때만</b> 중간에 일부를 뺄 수 있고, <span class="bn n1">1</span>보다 많이 빼면 넘은 부분에 세금이 붙어요 — 퇴직금(<span class="bn n2">2</span>)에서 나가면 퇴직소득세 100%, 세액공제분·수익(<span class="bn n3">3</span>)에서 나가면 16.5%예요.</div>
+        <div class="how-d">한 계좌 안에서는 <span class="bn n1">1</span>이 먼저 빠져서 <span class="bn n3">3</span>을 꽉 채울 수 없어요. 연금 개시 전에 연금저축에서 <span class="bn n1">1</span> 금액만큼만 인출하면 세금이 없어요(금융회사에 과세제외금액으로 등록돼 있어야 해요). 이 돈을 예금·ISA 같은 <b>'보충 계좌'</b>에 두고 매년 부족분을 꺼내 쓰세요. 단, <b>IRP는 법에서 정한 사유가 있을 때만</b> 중간에 일부를 뺄 수 있고, <span class="bn n1">1</span>보다 많이 빼면 넘은 부분에 세금이 붙어요 — 퇴직금(<span class="bn n2">2</span>)에서 나가면 퇴직소득세 100%, 세액공제 받은 원금·수익(<span class="bn n3">3</span>)에서 나가면 16.5%예요.</div>
       </div>
       <div class="how-card">
         <div class="how-no">방법 C</div>
@@ -1043,7 +1043,7 @@
         <table class="data-table yr-table" id="yr-table">
           <thead><tr>
             <th>수령연차</th><th>나이</th><th>연초 잔액</th><th>수령한도</th><th>인출액</th>
-            <th><span class="bn n1">1</span> 비과세</th><th><span class="bn n2">2</span> 퇴직금</th><th><span class="bn n3">3</span> 연금소득</th><th>한도 초과</th>
+            <th><span class="bn n1">1</span> 세액공제 받지 않은 원금</th><th><span class="bn n2">2</span> 퇴직금</th><th><span class="bn n3">3</span> 세액공제 받은 원금·수익</th><th>한도 초과</th>
             <th>퇴직소득세</th><th>연금소득세</th><th>기타소득세</th><th>세금 합계</th><th><span class="bn n3">3</span> 과세 방식</th><th>세후 수령</th>
           </tr></thead>
           <tbody></tbody>
@@ -1069,14 +1069,14 @@
         <div class="rule"><div class="rule-no">RULE 02 · 얼마까지</div><div class="rule-title">해마다 연금수령한도</div>
           <div class="rule-body"><span class="formula">연초 계좌 평가액 ÷ (11 − 연금수령연차) × 120%</span>
           한도를 넘겨 꺼낸 돈은 '연금외수령'이 되어 혜택이 사라집니다. <b>11년차부터는 한도가 없어요.</b> 2013년 3월 이전 가입자는 6년차부터 시작합니다.</div></div>
-        <div class="rule"><div class="rule-no">RULE 03 · 어떤 순서로</div><div class="rule-title"><span class="bn n1">1</span> 비과세 → <span class="bn n2">2</span> 퇴직금 → <span class="bn n3">3</span> 연금소득</div>
+        <div class="rule"><div class="rule-no">RULE 03 · 어떤 순서로</div><div class="rule-title"><span class="bn n1">1</span> 세액공제 받지 않은 원금 → <span class="bn n2">2</span> 퇴직금 → <span class="bn n3">3</span> 세액공제 받은 원금·수익</div>
           <div class="rule-body">꺼내는 순서는 고를 수 없고 법으로 정해져 있어요. 그래서 개시 초반에는 대부분 <span class="bn n1">1</span>·<span class="bn n2">2</span>가 빠져나가고, <b><span class="bn n3">3</span>에 대한 연금소득세는 뒤쪽에 몰립니다.</b></div></div>
         <div class="rule"><div class="rule-no">RULE 04 · 세금은</div><div class="rule-title">바구니 × 한도 안/밖</div>
           <div class="rule-body"><table class="mini-tbl">
             <tr><th>바구니</th><th>한도 안 (연금수령)</th><th>한도 밖 (연금외수령)</th></tr>
-            <tr><td><span class="bn n1">1</span> 비과세</td><td>0원</td><td>0원</td></tr>
+            <tr><td><span class="bn n1">1</span> 세액공제 받지 않은 원금</td><td>0원</td><td>0원</td></tr>
             <tr><td><span class="bn n2">2</span> 퇴직금</td><td>퇴직소득세의 70·60·50%</td><td>퇴직소득세 100%</td></tr>
-            <tr><td><span class="bn n3">3</span> 연금소득</td><td>5.5·4.4·3.3%</td><td>기타소득세 16.5%</td></tr>
+            <tr><td><span class="bn n3">3</span> 세액공제 받은 원금·수익</td><td>5.5·4.4·3.3%</td><td>기타소득세 16.5%</td></tr>
           </table></div></div>
         <div class="rule"><div class="rule-no">RULE 05 · 퇴직금 감면</div><div class="rule-title">오래 받을수록 세금이 줄어요</div>
           <div class="rule-body">퇴직금을 연금으로 받으면 퇴직소득세를 <b>1~10년차 30%, 11~20년차 40%, 21년차부터 50%</b> 깎아 줍니다(50% 구간은 2026년 1월 이후 수령분부터). 이때 연차는 <b>실제로 연금을 받은 해만</b> 셉니다.</div></div>
@@ -1283,7 +1283,7 @@ function levelPayment(balance, r, n) {
 /*
  p = {
    startAge, eligAge, pre2013,
-   b1, b2, retTaxNat, b3,      // ① 과세제외 ② 이연퇴직소득(+퇴직소득세 국세) ③ 세액공제분+수익
+   b1, b2, retTaxNat, b3,      // ① 과세제외 ② 이연퇴직소득(+퇴직소득세 국세) ③ 세액공제 받은 원금+수익
    r,                           // 연 운용수익률
    mode: 'years' | 'amount' | 'lump' | 'cap' | 'split',
    desired,                     // split 모드: 매년 받고 싶은 금액
@@ -1356,8 +1356,8 @@ function simulate(p) {
       w = Math.min(take12 + take3, limit);              // 수령한도 안에서만
     }
     else if (p.mode === 'split') {
-      // 계좌 나눠 쓰기: ③(세액공제분 계좌)에서 매년 capAmount까지 꽉 채우고,
-      // 부족분은 ①(공제 안 받은 돈) → ②(퇴직금) 계좌에서 보충. ①②는 1,500만원 계산에서 빠짐.
+      // 계좌 나누기: ③(세액공제 받은 원금 계좌)에서 매년 capAmount까지 꽉 채우고,
+      // 부족분은 ①(세액공제 받지 않은 원금) → ②(퇴직금) 계좌에서 보충. ①②는 1,500만원 계산에서 빠짐.
       const cap = Math.min(RULE.SEP_LIMIT, Math.max(0, p.capAmount));
       const want = Math.max(100000, p.desired || 0);
       let t3 = Math.min(b3, cap, want);
@@ -1391,7 +1391,7 @@ function simulate(p) {
 
     // 세금
     const tRet = pen.b2 * retRate * retireFactor(n) * RULE.LOCAL + out.b2 * retRate * RULE.LOCAL;
-    const p3 = pen.b3; // 1,500만원 판정 대상 (세액공제분+수익의 연금수령분)
+    const p3 = pen.b3; // 1,500만원 판정 대상 (세액공제 받은 원금+수익의 연금수령분)
     let tPen = 0, method = '-';
     let lowFlag = false, highFlag = false;
     if (p3 > 0) {
@@ -1518,7 +1518,7 @@ function readParams() {
 }
 
 function updateHints(p) {
-  $('b1-hint').innerHTML = state.b1Mode === 'doc' ? `<span class="bn n1">1</span> 세액공제 안 받은 돈 = <b>${fmtMan(p.b1)}</b>` : fmtMan(p.b1);
+  $('b1-hint').innerHTML = state.b1Mode === 'doc' ? `<span class="bn n1">1</span> 세액공제 받지 않은 원금 = <b>${fmtMan(p.b1)}</b>` : fmtMan(p.b1);
   $('b2-hint').textContent = fmtMan(p.b2);
   $('b3-hint').innerHTML = state.b3Mode === 'total'
     ? (p._b3neg ? '<b>총평가액이 1·2 바구니 합계보다 작아요.</b> 숫자를 다시 확인해 주세요.' : `총평가액 − 1 − 2 = <b>${fmtMan(p.b3)}</b>`)
@@ -1556,7 +1556,7 @@ function strategies(p) {
   const W = (p.mode === 'cap' || p.mode === 'split') ? p.phase1Amount : Math.round(firstW / 10000) * 10000;
   if (p.mode === 'cap' || p.mode === 'split') list.push({ key: 'same', name: '같은 금액 계속 받기', p: { ...p, mode: 'amount', amount: Math.max(100000, W) } });
   if (p.mode !== 'cap') list.push({ key: 'cap', name: '1,500만원 맞춤', p: { ...p, mode: 'cap', phase1Amount: W, capAmount: 15000000 } });
-  if (p.mode !== 'split') list.push({ key: 'split', name: '계좌 나눠 받기', p: { ...p, mode: 'split', desired: W, capAmount: 15000000 } });
+  if (p.mode !== 'split') list.push({ key: 'split', name: '계좌 나누기', p: { ...p, mode: 'split', desired: W, capAmount: 15000000 } });
   const mine = { key: 'mine', name: '내 계획', p: { ...p }, mine: true, res: mineRes };
   list.push(mine);
   list.forEach(s => { if (!s.res) s.res = simulate(s.p); });
@@ -1574,7 +1574,7 @@ function render() {
   const lastAge = rows.length ? rows[rows.length - 1].age : p.startAge;
 
   $('plan-desc').textContent = total0 > 0
-    ? `총 ${fmtMan(total0)}을 ${p.startAge}세부터 ${rows.length}년간(${p.startAge}~${lastAge}세) 받는 경우` + (S.leftover > 10000 ? ` · 100세에 ${fmtMan(S.leftover)}이 남아요` : '') + (p.mode === 'split' ? ' · 계좌 나눠 받기(3은 연 1,500만원까지, 부족분은 1·2에서)' : '')
+    ? `총 ${fmtMan(total0)}을 ${p.startAge}세부터 ${rows.length}년간(${p.startAge}~${lastAge}세) 받는 경우` + (S.leftover > 10000 ? ` · 100세에 ${fmtMan(S.leftover)}이 남아요` : '') + (p.mode === 'split' ? ' · 계좌 나누기(3은 연 1,500만원까지, 부족분은 1·2에서)' : '')
     : '금액을 입력해 주세요.';
 
   // 카드
@@ -1755,7 +1755,7 @@ function renderCap(p, list, mine) {
   if (ph12.length) {
     const a0 = ph12[0].age, a1 = ph12[ph12.length - 1].age;
     steps.push(['1단계', `<em>${a0}~${a1}세 (${ph12.length}년)</em> · <span class="bn n1">1</span><span class="bn n2">2</span> 바구니 구간은 필요한 만큼`,
-      `개시 직후에는 법에 정해진 순서대로 <span class="bn n1">1</span> 비과세 → <span class="bn n2">2</span> 퇴직금이 먼저 나가요. 이 돈은 <b>1,500만원 계산에 들어가지 않아서</b> 수령한도 안이라면 연 ${fmtMan(isCap ? p.phase1Amount : capS.p.phase1Amount)}을 받아도 괜찮아요.` +
+      `개시 직후에는 법에 정해진 순서대로 <span class="bn n1">1</span> 세액공제 받지 않은 원금 → <span class="bn n2">2</span> 퇴직금이 먼저 나가요. 이 돈은 <b>1,500만원 계산에 들어가지 않아서</b> 수령한도 안이라면 연 ${fmtMan(isCap ? p.phase1Amount : capS.p.phase1Amount)}을 받아도 괜찮아요.` +
       (p.b2 > 0 ? ` 퇴직금은 오래 나눌수록 감면이 커지지만(30→40→50%), 내 퇴직소득세율 ${pct(retRate)} 기준 감면 10%p 차이는 퇴직금 1억원당 약 ${fmtMan(1e8 * retRate * 0.1)}이라 1,500만원 기준을 지키는 쪽이 더 중요해요.` : '')]);
   }
   if (ph3.length) {
@@ -1806,8 +1806,8 @@ function renderSplit(p, mine) {
 
   const s3 = Math.min(CAP, want), s12 = Math.max(0, want - CAP);
   $('split-formula').innerHTML = want <= CAP
-    ? `<div class="sf-box s3"><small>3 세액공제분</small><b>${fmtShort(want)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년</small><b>${fmtShort(want)}</b></div><div style="font-size:14px;font-weight:700;color:var(--green);">1,500만원 이하라 나눠 쓸 필요가 없어요</div>`
-    : `<div class="sf-box s3"><small>3 세액공제분 (꽉 채우기)</small><b>${fmtShort(s3)}</b></div><span class="sf-op">+</span><div class="sf-box s12"><small>1·2 비과세·퇴직금 (보충)</small><b>${fmtShort(s12)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년 받는 돈</small><b>${fmtShort(want)}</b></div>`;
+    ? `<div class="sf-box s3"><small>3 세액공제 받은 원금·수익</small><b>${fmtShort(want)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년</small><b>${fmtShort(want)}</b></div><div style="font-size:14px;font-weight:700;color:var(--green);">1,500만원 이하라 계좌를 나눌 필요가 없어요</div>`
+    : `<div class="sf-box s3"><small>3 세액공제 받은 원금·수익 (꽉 채우기)</small><b>${fmtShort(s3)}</b></div><span class="sf-op">+</span><div class="sf-box s12"><small>1·2 세액공제 받지 않은 원금·퇴직금 (보충)</small><b>${fmtShort(s12)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년 받는 돈</small><b>${fmtShort(want)}</b></div>`;
 
   // 구간 묶기
   const rows = sp.rows, groups = [];
@@ -1820,7 +1820,7 @@ function renderSplit(p, mine) {
     const r0 = g.rows[0], a0 = r0.age, a1 = g.rows[g.rows.length - 1].age;
     const full = r0.w >= want - 1;
     const has1 = g.rows.some(r => r.from1 > 0.5), has2 = g.rows.some(r => r.from2 > 0.5);
-    const src12 = has1 && has2 ? '<span class="bn n1">1</span>→<span class="bn n2">2</span>' : has1 ? '<span class="bn n1">1</span> 비과세' : has2 ? '<span class="bn n2">2</span> 퇴직금' : '';
+    const src12 = has1 && has2 ? '<span class="bn n1">1</span>→<span class="bn n2">2</span>' : has1 ? '<span class="bn n1">1</span> 세액공제 받지 않은 원금' : has2 ? '<span class="bn n2">2</span> 퇴직금' : '';
     const parts = [];
     if (r0.from3 > 0.5) parts.push(`<span class="bn n3">3</span> <b>${fmtShort(r0.from3)}</b>`);
     if (r0.from1 + r0.from2 > 0.5) parts.push(`${src12} <b>${fmtShort(r0.from1 + r0.from2)}</b>`);
@@ -1832,7 +1832,7 @@ function renderSplit(p, mine) {
   // 비교
   const keep = (res) => { const k = res.rows.filter(r => r.w >= want - 10000); return k.length ? `${k.length}년 (${k[0].age}~${k[k.length - 1].age}세)` : '없음'; };
   const hi = (res) => res.rows.filter(r => r.p3 > RULE.SEP_LIMIT).length;
-  const cmp = [['그냥 같은 금액 받기', sm], ['순서대로 1,500 맞춤', cp], ['계좌 나눠 받기', sp]];
+  const cmp = [['그냥 같은 금액 받기', sm], ['순서대로 1,500 맞춤', cp], ['계좌 나누기', sp]];
   const minEff = Math.min(...cmp.filter(c => c[1].sum.withdrawn > 0).map(c => c[1].sum.effRate));
   cmp.forEach(c => { c[2] = c[1].sum.withdrawn > 0 && c[1].sum.effRate <= minEff + 5e-5 ? 'pick' : ''; });
   $('split-cmp').querySelector('tbody').innerHTML = cmp.map(([n, r, c]) => `<tr class="${c}"><td>${n}${c ? '<span class="best-badge">실효세율 최저</span>' : ''}</td><td>${keep(r)}</td><td class="${hi(r) ? 'warn' : ''}">${hi(r) ? hi(r) + '년' : '없음'}</td><td>${fmtT(r.sum.tax)}</td><td>${pct(r.sum.effRate)}</td></tr>`).join('');
@@ -1856,7 +1856,7 @@ function renderInsight(p, list, mine, lump) {
   const capS = list.find(s => s.key === 'cap');
   if (capS && capS.res.sum.effRate < S.effRate - 5e-4) tips.push(`<span class="bn n3">3</span> 바구니를 연 1,500만원 이하로 맞추는 <strong>1,500만원 맞춤 전략</strong>으로 바꾸면 실효세율이 ${pct(S.effRate)} → ${pct(capS.res.sum.effRate)}로 낮아져요. 대신 그 구간의 부족한 생활비는 연금계좌 밖에서 채워야 합니다.`);
   const spS = list.find(s => s.key === 'split');
-  if (spS && S.highYears && spS.res.sum.effRate < S.effRate - 5e-4) tips.push(`같은 금액이 필요하다면 <strong>계좌 나눠 받기</strong>(<span class="bn n3">3</span>은 연 1,500만원까지, 부족분은 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서)로 실효세율을 ${pct(S.effRate)} → ${pct(spS.res.sum.effRate)}로 낮출 수 있어요.`);
+  if (spS && S.highYears && spS.res.sum.effRate < S.effRate - 5e-4) tips.push(`같은 금액이 필요하다면 <strong>계좌 나누기</strong>(<span class="bn n3">3</span>은 연 1,500만원까지, 부족분은 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서)로 실효세율을 ${pct(S.effRate)} → ${pct(spS.res.sum.effRate)}로 낮출 수 있어요.`);
   if (best && best.key !== 'mine') tips.push(`비교한 방법 중에서는 <strong>${best.name}</strong>의 실효세율이 ${pct(best.res.sum.effRate)}로 가장 낮았어요.`);
   if (S.highYears) tips.push(`<span class="bn n3">3</span> 바구니에서 1년에 1,500만원을 넘게 받는 해가 ${S.highYears}년 있어요. 국민연금 등 다른 소득이 많다면 이 구간의 세금이 커질 수 있으니 고급 설정에 입력해 확인해 보세요.`);
   if (p.b2 > 0) tips.push(`퇴직금은 <strong>실제로 받은 해</strong>만 감면 연차로 쌓여요. 당장 돈이 필요 없어도 자격이 생기면 소액이라도 개시해 두는 게 유리합니다.`);
