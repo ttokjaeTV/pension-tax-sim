@@ -83,11 +83,25 @@
   .bucket-ex { font-size: 13px; color: var(--ink-mute); font-weight: 600; margin-bottom: 12px; min-height: 40px; }
   .bucket-tax { display: inline-block; font-size: 12px; font-weight: 800; color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); padding: 4px 10px; border-radius: 999px; margin-bottom: 14px; align-self: flex-start; }
   .bucket-arrow { display: flex; align-items: center; justify-content: center; color: var(--beige-gold); font-weight: 900; font-size: 22px; }
+  /* 바구니 3칸을 같은 줄 격자(subgrid)로 묶어 설명 길이·토글 유무가 달라도 입력칸 높이를 맞춤
+     줄 순서: 제목 / 설명 / 세금 / 토글 / 금액 입력(2번은 토글 자리를 비우고 근속연수까지 이 줄에) */
+  @supports (grid-template-rows: subgrid) {
+    @media (min-width: 961px) {
+      .buckets { grid-template-rows: repeat(5, auto); }
+      .bucket { display: grid; grid-row: span 5; grid-template-rows: subgrid; row-gap: 0; align-content: start; }
+      .bucket > * { min-width: 0; }
+      .bucket-tax { justify-self: start; align-self: start; }
+      .bucket-arrow { grid-row: span 5; }
+    }
+  }
   .order-note { margin-top: 16px; background: var(--bg-alt); border-radius: 12px; padding: 12px 16px; font-size: 14px; font-weight: 600; color: var(--ink-soft); }
   .order-note b { color: var(--accent); }
   .mini-toggle { display: flex; gap: 6px; margin: 12px 0 8px; }
   .mini-toggle button { flex: 1; font-family: inherit; font-size: 12px; font-weight: 800; padding: 7px 8px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--white); color: var(--ink-mute); cursor: pointer; }
   .mini-toggle button.on { border-color: var(--b2); color: var(--b2); background: #F1E9DD; }
+  /* 공적연금 입력 방식 토글: 칸 위가 아니라 그룹 맨 위에 두어 옆 칸 입력창과 높이를 맞춤 (폭은 첫 칸과 동일) */
+  .mini-toggle.pub-toggle { margin: 0 0 12px; max-width: calc((100% - 32px) / 3); }
+  @media (max-width: 768px) { .mini-toggle.pub-toggle { max-width: none; } }
 
 
   /* 서류 가이드 */
@@ -579,40 +593,45 @@
           <button type="button" data-v="direct" class="on">금액 바로 입력</button>
           <button type="button" data-v="doc">서류로 계산</button>
         </div>
-        <div id="b1-direct-wrap">
-          <label class="label">금액 (과세제외금액)</label>
-          <div class="input-wrap"><input type="text" inputmode="numeric" id="b1" data-man value="3,000"><span class="input-unit">만원</span></div>
+        <div class="bucket-main">
+          <div id="b1-direct-wrap">
+            <label class="label">금액 (과세제외금액)</label>
+            <div class="input-wrap"><input type="text" inputmode="numeric" id="b1" data-man value="3,000"><span class="input-unit">만원</span></div>
+          </div>
+          <div id="b1-doc-wrap" style="display:none;">
+            <label class="label">내가 직접 넣은 원금 합계</label>
+            <div class="input-wrap"><input type="text" inputmode="numeric" id="b1-paid" data-man value="15,000"><span class="input-unit">만원</span></div>
+            <div class="input-hint">증권사 앱 납입원금 (퇴직금 이체분 제외)</div>
+            <label class="label" style="margin-top:8px;">서류 1의 ⑧ 공제금액 잔액</label>
+            <div class="input-wrap"><input type="text" inputmode="numeric" id="b1-ded" data-man value="12,000"><span class="input-unit">만원</span></div>
+          </div>
+          <div class="input-hint" id="b1-hint"></div>
         </div>
-        <div id="b1-doc-wrap" style="display:none;">
-          <label class="label">내가 직접 넣은 원금 합계</label>
-          <div class="input-wrap"><input type="text" inputmode="numeric" id="b1-paid" data-man value="15,000"><span class="input-unit">만원</span></div>
-          <div class="input-hint">증권사 앱 납입원금 (퇴직금 이체분 제외)</div>
-          <label class="label" style="margin-top:8px;">서류 1의 ⑧ 공제금액 잔액</label>
-          <div class="input-wrap"><input type="text" inputmode="numeric" id="b1-ded" data-man value="12,000"><span class="input-unit">만원</span></div>
-        </div>
-        <div class="input-hint" id="b1-hint"></div>
       </div>
       <div class="bucket-arrow">→</div>
       <div class="bucket" style="--c: var(--b2);">
         <div class="bucket-head"><span class="bucket-num">2</span><span class="bucket-name">퇴직금 (IRP 이체분)</span></div>
         <div class="bucket-ex">회사에서 받은 퇴직금을 IRP로 옮겨 아직 퇴직소득세를 안 낸 돈</div>
         <span class="bucket-tax">퇴직소득세 30~50% 감면</span>
-        <label class="label">퇴직금 (영수증의 계좌입금금액)</label>
-        <div class="input-wrap"><input type="text" inputmode="numeric" id="b2" data-man value="20,000"><span class="input-unit">만원</span></div>
-        <div class="input-hint" id="b2-hint"></div>
-        <div class="mini-toggle" id="ret-mode">
-          <button type="button" data-v="calc" class="on">근속연수로 추정</button>
-          <button type="button" data-v="direct">영수증 세액 입력</button>
+        <div class="bucket-slot" aria-hidden="true"></div>
+        <div class="bucket-main">
+          <label class="label">퇴직금 (영수증의 계좌입금금액)</label>
+          <div class="input-wrap"><input type="text" inputmode="numeric" id="b2" data-man value="20,000"><span class="input-unit">만원</span></div>
+          <div class="input-hint" id="b2-hint"></div>
+          <div class="mini-toggle" id="ret-mode">
+            <button type="button" data-v="calc" class="on">근속연수로 추정</button>
+            <button type="button" data-v="direct">영수증 세액 입력</button>
+          </div>
+          <div id="ret-calc-wrap">
+            <label class="label">근속연수</label>
+            <div class="input-wrap"><input type="text" inputmode="numeric" id="ret-years" value="25"><span class="input-unit">년</span></div>
+          </div>
+          <div id="ret-direct-wrap" style="display:none;">
+            <label class="label">이연퇴직소득세 (소득세 칸)</label>
+            <div class="input-wrap"><input type="text" inputmode="numeric" id="ret-tax" value="5,075,000" data-won><span class="input-unit">원</span></div>
+          </div>
+          <div class="input-hint" id="ret-hint"></div>
         </div>
-        <div id="ret-calc-wrap">
-          <label class="label">근속연수</label>
-          <div class="input-wrap"><input type="text" inputmode="numeric" id="ret-years" value="25"><span class="input-unit">년</span></div>
-        </div>
-        <div id="ret-direct-wrap" style="display:none;">
-          <label class="label">이연퇴직소득세 (소득세 칸)</label>
-          <div class="input-wrap"><input type="text" inputmode="numeric" id="ret-tax" value="5,075,000" data-won><span class="input-unit">원</span></div>
-        </div>
-        <div class="input-hint" id="ret-hint"></div>
       </div>
       <div class="bucket-arrow">→</div>
       <div class="bucket" style="--c: var(--b3);">
@@ -623,15 +642,17 @@
           <button type="button" data-v="direct" class="on">금액 바로 입력</button>
           <button type="button" data-v="total">총평가액으로 계산</button>
         </div>
-        <div id="b3-direct-wrap">
-          <label class="label">금액</label>
-          <div class="input-wrap"><input type="text" inputmode="numeric" id="b3" data-man value="15,000"><span class="input-unit">만원</span></div>
+        <div class="bucket-main">
+          <div id="b3-direct-wrap">
+            <label class="label">금액</label>
+            <div class="input-wrap"><input type="text" inputmode="numeric" id="b3" data-man value="15,000"><span class="input-unit">만원</span></div>
+          </div>
+          <div id="b3-total-wrap" style="display:none;">
+            <label class="label">연금계좌 총평가액 (모두 합친 금액)</label>
+            <div class="input-wrap"><input type="text" inputmode="numeric" id="b3-total" data-man value="38,000"><span class="input-unit">만원</span></div>
+          </div>
+          <div class="input-hint" id="b3-hint"></div>
         </div>
-        <div id="b3-total-wrap" style="display:none;">
-          <label class="label">연금계좌 총평가액 (모두 합친 금액)</label>
-          <div class="input-wrap"><input type="text" inputmode="numeric" id="b3-total" data-man value="38,000"><span class="input-unit">만원</span></div>
-        </div>
-        <div class="input-hint" id="b3-hint"></div>
       </div>
     </div>
     <div class="order-note">꺼낼 때는 내가 고를 수 없고, 법에 정해진 대로 <b><span class="bn n1">1</span> → <span class="bn n2">2</span> → <span class="bn n3">3</span> 순서</b>로 빠져나갑니다. 세금이 없는 돈이 먼저, 세금이 가장 복잡한 돈이 마지막이에요.</div>
@@ -842,12 +863,12 @@
 
         <div class="adv-group">
           <div class="adv-group-t">국민연금 등 공적연금</div>
+          <div class="mini-toggle pub-toggle" id="pub-mode">
+            <button type="button" data-v="direct" class="on">금액 바로 입력</button>
+            <button type="button" data-v="est">예상연금으로 추정</button>
+          </div>
           <div class="grid-3">
             <div>
-              <div class="mini-toggle" id="pub-mode" style="margin-top:0;">
-                <button type="button" data-v="direct" class="on">금액 바로 입력</button>
-                <button type="button" data-v="est">예상연금으로 추정</button>
-              </div>
               <div id="pub-direct-wrap">
                 <label class="label">과세 대상 연금액 (연)</label>
                 <div class="input-wrap"><input type="text" inputmode="numeric" id="public" data-man value="0"><span class="input-unit">만원</span></div>
