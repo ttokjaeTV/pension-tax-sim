@@ -245,7 +245,75 @@ function simulate(p) {
   return { rows, sum };
 }
 
+/* ===== 건강보험료(건보료) — 은퇴 후 지역가입자·피부양자 (2026년 기준) =====
+   금융소득종합과세·건보료 계산기(ttokjaeTV/fin-income-tax)와 같은 요율·기준.
+   재산 등급표: 국민건강보험법 시행령 별표 4 (2024-05-07 개정, 재산 기본공제 1억원)
+   주택 재산세 과세표준: 공시가격 × 공정시장가액비율(1주택 특례 3억 이하 43%·6억 이하 44%·초과 45%, 2주택 이상 60%) */
+const NH = {
+  hi: 0.0719, ltc: 0.009448,             // 건강보험료율 · 장기요양보험료율(소득 대비)
+  floorIncomeM: 280000, floorPrem: 20160, // 지역 소득월액 하한 · 하한 보험료
+  capPremM: 4591740,                      // 소득 보험료 상한(월)
+  perPoint: 211.5, propDed: 1e8,          // 재산 부과점수당 금액 · 재산 기본공제
+  finMin: 10e6,                           // 이자·배당 1인 연 1,000만원 이하면 건보료 소득 제외(넘으면 전액)
+  pubRate: 0.5,                           // 지역가입자 공적연금 반영 비율
+  depIncome: 20e6, depProp1: 5.4e8, depProp2: 9e8, depPropIncome: 10e6,
+};
+// [재산금액 상한(만원), 점수] 1~60등급
+const NH_PROP = [[450,22],[900,44],[1350,66],[1800,97],[2250,122],[2700,146],[3150,171],[3600,195],[4050,219],[4500,244],
+  [5020,268],[5590,294],[6220,320],[6930,344],[7710,365],[8590,386],[9570,412],[10700,439],[11900,465],[13300,490],
+  [14800,516],[16400,535],[18300,559],[20400,586],[22700,611],[25300,637],[28100,659],[31300,681],[34900,706],[38800,731],
+  [43200,757],[48100,785],[53600,812],[59700,841],[66500,881],[74000,921],[82400,961],[91800,1001],[103000,1041],[114000,1091],
+  [127000,1141],[142000,1191],[158000,1241],[176000,1291],[196000,1341],[218000,1391],[242000,1451],[270000,1511],[300000,1571],[330000,1641],
+  [363000,1711],[399300,1781],[439230,1851],[483153,1921],[531468,1991],[584615,2061],[643077,2131],[707385,2201],[778124,2271],[Infinity,2341]];
+
+// 주택 재산세 과세표준 (gongsi: 공시가격 합계, multi: 2주택 이상)
+function houseTaxBase(gongsi, multi) {
+  if (!(gongsi > 0)) return 0;
+  if (multi) return gongsi * 0.6;
+  return gongsi * (gongsi <= 3e8 ? 0.43 : gongsi <= 6e8 ? 0.44 : 0.45);
+}
+function propPoints(taxBase) {
+  const man = (taxBase - NH.propDed) / 1e4;
+  if (man <= 0) return 0;
+  for (const [lim, pt] of NH_PROP) if (man <= lim) return pt;
+  return 2341;
+}
+// 건보료 소득에 잡히는 금융소득 (1인 기준)
+const nhFin = f => (f > NH.finMin ? f : 0);
+
+/* 지역가입자 월 보험료 (세대 합산)
+   o = { pub: [공적연금 연액…], fin: [이자·배당 연액…], other: 임대·사업 등 소득금액(연, 세대 합계), taxBase: 주택 과세표준 } */
+function nhRegional(o) {
+  const pubs = o.pub || [], fins = o.fin || [];
+  const income = pubs.reduce((a, v) => a + Math.max(0, v) * NH.pubRate, 0)
+               + fins.reduce((a, v) => a + nhFin(Math.max(0, v)), 0) + Math.max(0, o.other || 0);
+  const m = income / 12;
+  const incPrem = m <= NH.floorIncomeM ? NH.floorPrem : Math.min(NH.capPremM, m * NH.hi);
+  const pts = propPoints(o.taxBase || 0);
+  const propPrem = pts * NH.perPoint;
+  const health = incPrem + propPrem;
+  const ltc = health * NH.ltc / NH.hi;
+  return { income, m, incPrem, pts, propPrem, health, ltc, total: health + ltc, floor: m <= NH.floorIncomeM };
+}
+
+/* 피부양자 요건 (가족 중 직장가입자가 있을 때)
+   people = [{ pub, fin, other, taxBase }] — 소득: 공적연금 100% + 금융소득(1,000만원 넘으면 전액) + 기타. 사적연금 제외.
+   소득 요건은 부부를 함께(한 명이 넘으면 둘 다 탈락), 재산 요건은 각자 명의 기준 */
+function nhDependent(people) {
+  const res = people.map(p => {
+    const inc = Math.max(0, p.pub || 0) + nhFin(Math.max(0, p.fin || 0)) + Math.max(0, p.other || 0);
+    const tb = p.taxBase || 0;
+    const incOk = inc <= NH.depIncome;
+    const propOk = tb <= NH.depProp1 || (tb <= NH.depProp2 && inc <= NH.depPropIncome);
+    return { inc, tb, incOk, propOk };
+  });
+  const incAll = res.every(r => r.incOk);
+  res.forEach(r => { r.ok = incAll && r.propOk; });
+  return { people: res, incAll, ok: res.every(r => r.ok) };
+}
+
 if (typeof module !== 'undefined') module.exports = {
   RULE, pensionRate, retireFactor, progressiveTax, pensionDeduction,
   comprehensiveTax, retirementTax, levelPayment, simulate,
+  NH, NH_PROP, houseTaxBase, propPoints, nhRegional, nhDependent,
 };

@@ -221,6 +221,21 @@
   .how-t b { font-weight: 900; color: var(--accent); }
   .how-d { font-size: 13.5px; font-weight: 600; color: var(--ink-soft); line-height: 1.7; }
   .how-d b { color: var(--ink); font-weight: 800; }
+
+  .nh-out { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .nh-box { background: var(--bg-alt); border-radius: 14px; padding: 16px 18px; }
+  .nh-box.dark { background: var(--dark-warm); color: var(--white); }
+  .nh-box .nh-k { font-size: 12.5px; font-weight: 800; color: var(--ink-mute); letter-spacing: .2px; }
+  .nh-box.dark .nh-k { color: #D9C9BA; }
+  .nh-box .nh-v { font-size: 26px; font-weight: 900; letter-spacing: -.5px; margin: 4px 0 6px; }
+  .nh-box .nh-v small { font-size: 14px; font-weight: 700; opacity: .8; }
+  .nh-box ul { margin: 0; padding-left: 18px; font-size: 13.5px; font-weight: 600; line-height: 1.7; }
+  .nh-box.dark ul { color: #EDE4D8; }
+  .nh-box .nh-s { font-size: 13px; font-weight: 600; line-height: 1.6; }
+  .nh-box.wide { grid-column: 1 / -1; }
+  .nh-tag { display: inline-block; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: 2px; }
+  .nh-tag.ok { background: var(--green-soft); color: #2F3D2F; } .nh-tag.no { background: #FBE3D6; color: #7A2E14; }
+  @media (max-width: 768px) { .nh-out { grid-template-columns: 1fr; } #nh-card .grid-2 { grid-template-columns: 1fr !important; } }
   .split-warn { margin-top: 14px; font-size: 13px; font-weight: 600; color: #7A2E14; background: #FBE3D6; border-radius: 10px; padding: 12px 14px; line-height: 1.65; }
   .split-warn b { font-weight: 900; }
   details.adv { margin-top: 22px; border-top: 1px dashed var(--border); padding-top: 18px; }
@@ -1042,6 +1057,101 @@
     </div>
   </div>
 
+  <!-- 부부라면: 배우자 연금계좌 -->
+  <div class="card" id="couple-card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">부부라면</span></div>
+    <div class="step-title">배우자 연금계좌도 있다면? 1,500만원 기준은 사람마다 따로예요</div>
+    <div class="step-desc">연 1,500만원 기준과 연금소득세는 <b>1인당</b> 계산해요. 같은 돈이라도 한 사람 계좌에 몰려 있으면 1,500만원을 넘기 쉽고, 부부가 나눠 갖고 있으면 각자 기준 안에서 꺼낼 수 있어요. 위 STEP 01~03은 <b>본인 계좌만</b> 본 결과입니다.</div>
+    <div class="grid-3">
+      <div>
+        <label class="label">배우자 <span class="bn n1">1</span> 세액공제 받지 않은 원금</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="sp-b1" data-man value="0"><span class="input-unit">만원</span></div>
+      </div>
+      <div>
+        <label class="label">배우자 <span class="bn n2">2</span> 퇴직금 (IRP, 세전)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="sp-b2" data-man value="0"><span class="input-unit">만원</span></div>
+        <div class="input-hint" id="sp-b2-hint">근속연수로 퇴직소득세를 계산해요</div>
+      </div>
+      <div>
+        <label class="label">배우자 <span class="bn n3">3</span> 세액공제 받은 원금·수익</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="sp-b3" data-man value="8,000"><span class="input-unit">만원</span></div>
+      </div>
+      <div>
+        <label class="label">배우자 퇴직금 근속연수</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="sp-ret-years" value="20"><span class="input-unit">년</span></div>
+      </div>
+      <div>
+        <label class="label">배우자가 본인보다 어린 나이</label>
+        <div class="input-wrap"><input type="text" id="sp-diff" value="2"><span class="input-unit">살</span></div>
+        <div class="input-hint">연상이면 앞에 -를 붙여 주세요 (예: -2)</div>
+      </div>
+      <div>
+        <label class="label">배우자 공적연금 과세 대상액 (연)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="sp-pub" data-man value="0"><span class="input-unit">만원</span></div>
+        <div class="input-hint">본인 공적연금과 같은 나이(STEP 02 고급 설정)부터 합쳐요</div>
+      </div>
+    </div>
+    <div class="split-input" style="margin-top:16px;">
+      <div>
+        <label class="label">부부가 매년 받고 싶은 금액 (세전)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="cp-want" data-man value="4,000"><span class="input-unit">만원</span></div>
+        <div class="input-hint" id="cp-want-hint"></div>
+      </div>
+      <div class="split-formula" id="cp-formula" style="font-weight:700; font-size:14px; line-height:1.6;"></div>
+    </div>
+    <div class="table-wrap" style="margin-top:14px;">
+      <table class="data-table" id="cp-table">
+        <thead><tr><th>누구 계좌에 있나</th><th>원하는 금액 유지</th><th><span class="bn n3">3</span> 1,500만원 초과</th><th>총 세금</th><th>실효세율</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="alerts" id="cp-alerts" style="margin-top:12px;"></div>
+    <div class="split-warn">이미 쌓인 연금저축·IRP는 <b>배우자 명의로 옮길 수 없어요</b>(계좌 이전은 본인 명의 계좌끼리만). 이 효과를 보려면 <b>앞으로 넣을 돈</b>을 나눠 넣어야 합니다. 연금저축은 소득이 없어도 가입할 수 있고(세액공제는 소득이 있어야 받아요), 배우자에게 주는 돈은 10년간 6억원까지 증여세가 없어요. 두 사람 모두 같은 해에 개시하고, 매년 원하는 금액을 계좌 잔액 비율대로 나눠 각자 '계좌 나누기' 방식으로 꺼낸다고 보고 계산했어요.</div>
+  </div>
+
+  <!-- 건보료 체크 -->
+  <div class="card" id="nh-card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">건보료 체크</span></div>
+    <div class="step-title">은퇴 후 건보료는? 연금저축·IRP에서 꺼낸 돈은 0원으로 잡혀요</div>
+    <div class="step-desc">은퇴하면 회사 건강보험이 끝나고, 가족 직장보험의 <b>피부양자</b>가 되거나 <b>지역가입자</b>가 돼요. 지역가입자 건강보험료(건보료)는 공적연금·이자·배당·임대소득과 집에 붙고, <b>연금저축·IRP(사적연금)에서 받는 돈은 얼마를 받든 반영되지 않습니다.</b></div>
+    <div class="grid-3">
+      <div>
+        <label class="label">본인 공적연금 (월, 받는 금액)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-pub" data-man value="150"><span class="input-unit">만원</span></div>
+        <div class="input-hint">국민연금·공무원연금 등 전액 (2002년 이전 분 포함)</div>
+      </div>
+      <div>
+        <label class="label">배우자 공적연금 (월)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-sp-pub" data-man value="0"><span class="input-unit">만원</span></div>
+        <div class="input-hint">1인 가구면 0</div>
+      </div>
+      <div>
+        <label class="label">임대·사업 등 다른 소득 (연, 부부 합계)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-other" data-man value="0"><span class="input-unit">만원</span></div>
+        <div class="input-hint">경비 뺀 소득금액</div>
+      </div>
+      <div>
+        <label class="label">본인 이자·배당 (연, 일반계좌)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-fin" data-man value="0"><span class="input-unit">만원</span></div>
+        <div class="input-hint">1인 1,000만원 넘으면 전액 반영</div>
+      </div>
+      <div>
+        <label class="label">배우자 이자·배당 (연)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-sp-fin" data-man value="0"><span class="input-unit">만원</span></div>
+      </div>
+      <div>
+        <label class="label">집 공시가격 합계</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-house" data-man value="40,000"><span class="input-unit">만원</span></div>
+        <div class="input-hint">시세가 아니라 공시가격 (부동산 공시가격 알리미에서 조회). 무주택이면 0</div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <label class="check"><input type="checkbox" id="nh-multi"><span>집이 2채 이상이에요<small>1주택 특례(과세표준 = 공시가격의 43~45%) 대신 60%로 계산해요</small></span></label>
+      <label class="check"><input type="checkbox" id="nh-dep"><span>자녀 등 가족 중 직장가입자가 있어요<small>피부양자로 올라갈 수 있는지 함께 따져 봐요 (집은 본인 명의로 봐요)</small></span></label>
+    </div>
+    <div class="nh-out" id="nh-out"></div>
+  </div>
+
   <!-- STEP 04 전략 비교 -->
   <div class="card">
     <div class="step-label"><div class="step-line"></div><span class="step-text">STEP 04</span></div>
@@ -1168,7 +1278,8 @@
       <div class="method-box">
         <div class="method-t">계산에 넣지 않은 것</div>
         <ul class="method-list">
-          <li><b>건강보험료</b> — 연금저축·IRP에서 받는 연금은 현재 건보료를 매기지 않아요(국민연금 등 공적연금 소득에만 부과).<small>SBS Biz 2026-02-06 보도 기준 · 2026-10-12 확인. 제도가 바뀔 수 있으니 국민건강보험공단에서 확인하세요.</small></li>
+          <li><b>건강보험료</b> — 연금저축·IRP에서 받는 연금은 현재 건보료를 매기지 않아요(국민연금 등 공적연금 소득에만 부과). 공적연금·이자·배당·집에 붙는 건보료는 위 <b>‘건보료 체크’</b> 카드에서 따로 추정해요(세금 합계에는 넣지 않음).<small>SBS Biz 2026-02-06 보도 기준 · 2026-10-12 확인. 제도가 바뀔 수 있으니 국민건강보험공단에서 확인하세요.</small></li>
+          <li><b>생활비 전체와 고갈 나이</b> — 국민연금·ISA·예금까지 합쳐 몇 살까지 버티는지는 <a href="https://ttokjaetv.github.io/retire-drawdown/" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800;">노후 자금 고갈 시뮬레이터</a>에서 계산해요.</li>
           <li><b>공적연금·다른 소득 자체의 세금과 건보료</b> — 고급 설정에 넣은 국민연금, 임대·사업소득 등은 종합과세가 유리한지 판단할 때만 써요. 총 세금에는 <span class="bn n3">3</span> 세액공제 받은 원금·수익 때문에 <b>늘어나는 세금만</b> 들어가고, 그 소득에 원래 붙는 세금과 건보료는 따로 계산해야 해요.</li>
           <li><b>연금계좌 밖의 돈</b> — '1,500 맞춤 → 순서대로 받기'에서 모자란 생활비를 ISA·예금 등으로 채우는 부분은 그 돈의 수익과 세금을 계산하지 않아요.</li>
         </ul>
@@ -1512,9 +1623,77 @@ function simulate(p) {
   return { rows, sum };
 }
 
+/* ===== 건강보험료(건보료) — 은퇴 후 지역가입자·피부양자 (2026년 기준) =====
+   금융소득종합과세·건보료 계산기(ttokjaeTV/fin-income-tax)와 같은 요율·기준.
+   재산 등급표: 국민건강보험법 시행령 별표 4 (2024-05-07 개정, 재산 기본공제 1억원)
+   주택 재산세 과세표준: 공시가격 × 공정시장가액비율(1주택 특례 3억 이하 43%·6억 이하 44%·초과 45%, 2주택 이상 60%) */
+const NH = {
+  hi: 0.0719, ltc: 0.009448,             // 건강보험료율 · 장기요양보험료율(소득 대비)
+  floorIncomeM: 280000, floorPrem: 20160, // 지역 소득월액 하한 · 하한 보험료
+  capPremM: 4591740,                      // 소득 보험료 상한(월)
+  perPoint: 211.5, propDed: 1e8,          // 재산 부과점수당 금액 · 재산 기본공제
+  finMin: 10e6,                           // 이자·배당 1인 연 1,000만원 이하면 건보료 소득 제외(넘으면 전액)
+  pubRate: 0.5,                           // 지역가입자 공적연금 반영 비율
+  depIncome: 20e6, depProp1: 5.4e8, depProp2: 9e8, depPropIncome: 10e6,
+};
+// [재산금액 상한(만원), 점수] 1~60등급
+const NH_PROP = [[450,22],[900,44],[1350,66],[1800,97],[2250,122],[2700,146],[3150,171],[3600,195],[4050,219],[4500,244],
+  [5020,268],[5590,294],[6220,320],[6930,344],[7710,365],[8590,386],[9570,412],[10700,439],[11900,465],[13300,490],
+  [14800,516],[16400,535],[18300,559],[20400,586],[22700,611],[25300,637],[28100,659],[31300,681],[34900,706],[38800,731],
+  [43200,757],[48100,785],[53600,812],[59700,841],[66500,881],[74000,921],[82400,961],[91800,1001],[103000,1041],[114000,1091],
+  [127000,1141],[142000,1191],[158000,1241],[176000,1291],[196000,1341],[218000,1391],[242000,1451],[270000,1511],[300000,1571],[330000,1641],
+  [363000,1711],[399300,1781],[439230,1851],[483153,1921],[531468,1991],[584615,2061],[643077,2131],[707385,2201],[778124,2271],[Infinity,2341]];
+
+// 주택 재산세 과세표준 (gongsi: 공시가격 합계, multi: 2주택 이상)
+function houseTaxBase(gongsi, multi) {
+  if (!(gongsi > 0)) return 0;
+  if (multi) return gongsi * 0.6;
+  return gongsi * (gongsi <= 3e8 ? 0.43 : gongsi <= 6e8 ? 0.44 : 0.45);
+}
+function propPoints(taxBase) {
+  const man = (taxBase - NH.propDed) / 1e4;
+  if (man <= 0) return 0;
+  for (const [lim, pt] of NH_PROP) if (man <= lim) return pt;
+  return 2341;
+}
+// 건보료 소득에 잡히는 금융소득 (1인 기준)
+const nhFin = f => (f > NH.finMin ? f : 0);
+
+/* 지역가입자 월 보험료 (세대 합산)
+   o = { pub: [공적연금 연액…], fin: [이자·배당 연액…], other: 임대·사업 등 소득금액(연, 세대 합계), taxBase: 주택 과세표준 } */
+function nhRegional(o) {
+  const pubs = o.pub || [], fins = o.fin || [];
+  const income = pubs.reduce((a, v) => a + Math.max(0, v) * NH.pubRate, 0)
+               + fins.reduce((a, v) => a + nhFin(Math.max(0, v)), 0) + Math.max(0, o.other || 0);
+  const m = income / 12;
+  const incPrem = m <= NH.floorIncomeM ? NH.floorPrem : Math.min(NH.capPremM, m * NH.hi);
+  const pts = propPoints(o.taxBase || 0);
+  const propPrem = pts * NH.perPoint;
+  const health = incPrem + propPrem;
+  const ltc = health * NH.ltc / NH.hi;
+  return { income, m, incPrem, pts, propPrem, health, ltc, total: health + ltc, floor: m <= NH.floorIncomeM };
+}
+
+/* 피부양자 요건 (가족 중 직장가입자가 있을 때)
+   people = [{ pub, fin, other, taxBase }] — 소득: 공적연금 100% + 금융소득(1,000만원 넘으면 전액) + 기타. 사적연금 제외.
+   소득 요건은 부부를 함께(한 명이 넘으면 둘 다 탈락), 재산 요건은 각자 명의 기준 */
+function nhDependent(people) {
+  const res = people.map(p => {
+    const inc = Math.max(0, p.pub || 0) + nhFin(Math.max(0, p.fin || 0)) + Math.max(0, p.other || 0);
+    const tb = p.taxBase || 0;
+    const incOk = inc <= NH.depIncome;
+    const propOk = tb <= NH.depProp1 || (tb <= NH.depProp2 && inc <= NH.depPropIncome);
+    return { inc, tb, incOk, propOk };
+  });
+  const incAll = res.every(r => r.incOk);
+  res.forEach(r => { r.ok = incAll && r.propOk; });
+  return { people: res, incAll, ok: res.every(r => r.ok) };
+}
+
 if (typeof module !== 'undefined') module.exports = {
   RULE, pensionRate, retireFactor, progressiveTax, pensionDeduction,
   comprehensiveTax, retirementTax, levelPayment, simulate,
+  NH, NH_PROP, houseTaxBase, propPoints, nhRegional, nhDependent,
 };
 
 
@@ -1741,7 +1920,90 @@ function render() {
   renderCap(p, list, mine);
   renderSplit(p, mine);
   renderInsight(p, list, mine, lump);
+  renderCouple(p);
+  renderNh(p, mine);
   renderCharts(list, rows);
+}
+
+// ===== 부부라면: 같은 돈을 한 사람이 다 가진 경우 vs 부부가 나눠 가진 경우 =====
+function keepYears(rows, want) { let k = 0; for (const r of rows) { if (r.w >= want * 0.999 - 1) k++; else break; } return k; }
+function renderCouple(p) {
+  const sb1 = Math.max(0, num('sp-b1')), sb2 = Math.max(0, num('sp-b2')), sb3 = Math.max(0, num('sp-b3'));
+  const sYears = Math.max(1, num('sp-ret-years'));
+  const sRet = sb2 > 0 ? retirementTax(sb2, sYears) : 0;
+  $('sp-b2-hint').innerHTML = sb2 > 0 ? `퇴직소득세 <b>${fmtMan(sRet * 1.1)}</b> (지방세 포함) · 세율 ${pct(sRet * 1.1 / sb2)}` : '근속연수로 퇴직소득세를 계산해요';
+  const diff = Math.round(num('sp-diff')) || 0;
+  const W = Math.max(100000, num('cp-want'));
+  const totMe = p.b1 + p.b2 + p.b3, totSp = sb1 + sb2 + sb3, tot = totMe + totSp;
+  const tb = $('cp-table').querySelector('tbody');
+  if (totSp <= 0 || totMe <= 0) {
+    tb.innerHTML = '';
+    $('cp-formula').innerHTML = totSp <= 0 ? '배우자 계좌 금액을 넣으면 비교해 드려요.' : 'STEP 01에 본인 계좌 금액을 넣어 주세요.';
+    $('cp-want-hint').textContent = ''; $('cp-alerts').innerHTML = '';
+    return;
+  }
+  const spAge0 = p.startAge - diff;                 // 본인이 개시하는 해의 배우자 나이
+  const spStart = Math.max(55, spAge0);
+  const wMe = W * totMe / tot, wSp = W * totSp / tot;
+  const base = { r: p.r, mode: 'split', capAmount: 15000000, otherIncome: p.otherIncome, pre2013: false };
+  const me = simulate({ ...p, ...base, desired: Math.max(100000, wMe) });
+  const sp = simulate({ ...base, startAge: spStart, eligAge: spStart, b1: sb1, b2: sb2, retTaxNat: sRet, b3: sb3,
+    desired: Math.max(100000, wSp), publicPension: Math.max(0, num('sp-pub')), publicStartAge: p.publicStartAge - diff, otherIncome: 0 });
+  const one = simulate({ ...p, ...base, b1: p.b1 + sb1, b2: p.b2 + sb2, retTaxNat: p.retTaxNat + sRet, b3: p.b3 + sb3, desired: W });
+  const each = {
+    tax: me.sum.tax + sp.sum.tax, w: me.sum.withdrawn + sp.sum.withdrawn,
+    high: me.sum.highYears + sp.sum.highYears, keep: Math.min(keepYears(me.rows, wMe), keepYears(sp.rows, wSp)),
+  };
+  each.eff = each.w > 0 ? each.tax / each.w : 0;
+  const o = { tax: one.sum.tax, w: one.sum.withdrawn, high: one.sum.highYears, keep: keepYears(one.rows, W), eff: one.sum.effRate };
+  $('cp-want-hint').innerHTML = `월 ${fmtMan(W / 12)} · 본인 ${fmtMan(wMe)} + 배우자 ${fmtMan(wSp)} (계좌 잔액 비율)`;
+  $('cp-formula').innerHTML = `<div>본인 <b>${fmtMan(totMe)}</b> · 배우자 <b>${fmtMan(totSp)}</b><br>각자 <span class="bn n3">3</span>에서 연 1,500만원까지 → 부부 합쳐 <b>연 3,000만원</b>까지 저율 3.3~5.5%</div>`;
+  const row = (nm, x, best) => `<tr class="${best ? 'mine' : ''}"><td>${nm}${best ? '<span class="best-badge">세금 적음</span>' : ''}</td><td>${x.keep}년</td><td class="${x.high ? 'warn' : ''}">${x.high ? x.high + '년' : '없음'}</td><td>${fmtT(x.tax)}</td><td>${pct(x.eff)}</td></tr>`;
+  const eachBetter = each.eff <= o.eff + 1e-9;
+  tb.innerHTML = row('부부가 각자 (지금 입력한 대로)', each, eachBetter) + row('한 사람 계좌에 다 있었다면', o, !eachBetter);
+  const al = [];
+  const dEff = o.eff - each.eff;
+  if (dEff > 0.0005) al.push(['ok', `<b>부부가 나눠 갖고 있어서 실효세율이 ${pct(o.eff)} → ${pct(each.eff)}로 낮아져요.</b> ${each.keep > o.keep ? `원하는 금액도 ${o.keep}년 → <b>${each.keep}년</b> 동안 이어져요(각자 <span class="bn n3">3</span>에서 1,500만원씩 꺼낼 수 있어서). ` : ''}${o.high ? `한 사람 계좌였다면 <span class="bn n3">3</span>에서 받는 돈이 ${o.high}년 동안 1,500만원을 넘었을 거예요.` : ''}`]);
+  else al.push(['info', `<b>이 금액에서는 나눠 가져도 세금 차이가 거의 없어요.</b> 한 사람 계좌만으로도 <span class="bn n3">3</span>에서 받는 돈이 1,500만원 안에 들어오기 때문이에요. 원하는 금액을 늘리면 차이가 생겨요.`]);
+  if (spAge0 < 55) al.push(['warn', `본인이 ${p.startAge}세에 개시할 때 배우자는 ${spAge0}세라 아직 연금을 받을 수 없어요. 배우자 계좌는 <b>55세(${55 - spAge0}년 뒤)</b>부터 받는 것으로 계산했어요.`]);
+  $('cp-alerts').innerHTML = al.map(([k, h]) => `<div class="alert ${k}"><span class="ic">${k === 'ok' ? '✓' : k === 'warn' ? '!' : 'i'}</span><div>${h}</div></div>`).join('');
+}
+
+// ===== 건보료 체크 (지역가입자 · 피부양자) =====
+let nhSynced = false;
+function renderNh(p, mine) {
+  if (!nhSynced) {   // 처음 한 번만 STEP 02의 공적연금·다른 소득을 가져온다
+    const m = state.pubMode === 'est' ? num('nps-month') : num('public') / 12;
+    if (m > 0) $('nh-pub').value = Math.round(m / 10000).toLocaleString();
+    if (num('other') > 0) $('nh-other').value = Math.round(num('other') / 10000).toLocaleString();
+    nhSynced = true;
+  }
+  const pubMe = Math.max(0, num('nh-pub')) * 12, pubSp = Math.max(0, num('nh-sp-pub')) * 12;
+  const finMe = Math.max(0, num('nh-fin')), finSp = Math.max(0, num('nh-sp-fin')), other = Math.max(0, num('nh-other'));
+  const multi = $('nh-multi').checked, tbase = houseTaxBase(Math.max(0, num('nh-house')), multi);
+  const R = nhRegional({ pub: [pubMe, pubSp], fin: [finMe, finSp], other, taxBase: tbase });
+  const won = v => Math.round(v).toLocaleString() + '원';
+  let h = `<div class="nh-box dark"><div class="nh-k">지역가입자라면 (부부 한 세대)</div><div class="nh-v">월 ${won(R.total)}</div>
+    <ul><li>소득 보험료 ${won(R.incPrem)}${R.floor ? ' (하한 보험료)' : ` — 반영 소득 연 ${fmtMan(R.income)}`}</li>
+    <li>재산 보험료 ${won(R.propPrem)} — 과세표준 ${fmtMan(tbase)}${R.pts ? `, ${R.pts}점` : ' (1억원 공제 후 0)'}</li>
+    <li>장기요양보험료 ${won(R.ltc)}</li></ul></div>`;
+  // 비교: 연금계좌에서 꺼낸 첫해 금액이 일반계좌 배당이었다면
+  const w0 = mine.res.rows.length ? mine.res.rows[0].w : 0;
+  const R2 = nhRegional({ pub: [pubMe, pubSp], fin: [finMe + w0, finSp], other, taxBase: tbase });
+  h += `<div class="nh-box"><div class="nh-k">연금계좌에서 꺼낸 돈의 건보료</div><div class="nh-v">0원</div>
+    <div class="nh-s">내 계획 첫해 인출액 <b>${fmtMan(w0)}</b>은 건보료에 잡히지 않아요. 같은 금액을 <b>일반계좌 이자·배당</b>으로 받았다면 건보료가 <b>월 ${won(Math.max(0, R2.total - R.total))}</b> 더 나왔을 거예요${finMe + w0 > 2e7 ? ' (금융소득종합과세 대상이 되는 세금은 별도)' : ''}.</div></div>`;
+  if ($('nh-dep').checked) {
+    const D = nhDependent([{ pub: pubMe, fin: finMe, other, taxBase: tbase }, ...(pubSp + finSp > 0 || num('sp-b3') > 0 ? [{ pub: pubSp, fin: finSp, other: 0, taxBase: 0 }] : [])]);
+    const me = D.people[0];
+    const li = [];
+    li.push(`본인 소득 ${fmtMan(me.inc)} ${me.inc <= NH.depIncome ? '≤' : '>'} 2,000만원${D.people[1] ? ` · 배우자 ${fmtMan(D.people[1].inc)}` : ''}${D.incAll ? '' : ' → 소득 요건은 부부를 함께 봐서 <b>둘 다 탈락</b>'}`);
+    li.push(`집 과세표준 ${fmtMan(tbase)} ${tbase <= NH.depProp1 ? '≤ 5.4억원 → 통과' : tbase <= NH.depProp2 ? `(5.4억~9억) → 소득 ${me.inc <= NH.depPropIncome ? '1,000만원 이하라 통과' : '1,000만원 초과라 탈락'}` : '> 9억원 → 탈락'}`);
+    h += `<div class="nh-box wide"><div class="nh-k">피부양자로 올라갈 수 있나요?<span class="nh-tag ${D.ok ? 'ok' : 'no'}">${D.ok ? '부부 모두 가능' : (D.people.some(x => x.ok) ? '일부만 가능' : '탈락 → 지역가입자')}</span></div>
+      <ul style="margin-top:6px;">${li.map(x => `<li>${x}</li>`).join('')}</ul>
+      <div class="nh-s" style="margin-top:6px;">피부양자는 보험료가 0원이에요. 사업자등록이 있으면 사업소득이 1원만 있어도 탈락하는 등 세부 요건이 더 있으니, 정확한 판정은 국민건강보험공단(1577-1000)에서 확인하세요.</div></div>`;
+  }
+  h += `<div class="nh-box wide" style="background:transparent; padding:4px 2px;"><div class="nh-s" style="color:var(--ink-mute); font-size:12.5px;">2026년 기준 추정입니다: 건강보험료율 7.19%, 장기요양 0.9448%(소득 대비), 지역가입자 공적연금 50% 반영, 이자·배당은 1인 연 1,000만원 넘으면 전액, 재산은 주택 과세표준에서 1억원 공제 후 등급 점수 × 211.5원. 전월세 보증금·토지·세대원 근로소득은 넣지 않았고, 실제 보험료는 전년도 소득 자료로 매겨져요.</div></div>`;
+  $('nh-out').innerHTML = h;
 }
 
 // ===== 표 내려받기 (원 단위 숫자) =====
