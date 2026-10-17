@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script src="https://ttokjaetv.github.io/member-lock.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>연금 인출 세금 시뮬레이터 · 똑재TV</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -695,7 +696,7 @@
         <div class="seg" id="mode-seg">
           <button type="button" data-v="years" class="on">기간으로</button>
           <button type="button" data-v="amount">금액으로</button>
-          <button type="button" data-v="cap">1,500 맞춤</button>
+          <button type="button" data-v="cap" data-member-click="1,500만원 맞춤 전략 적용">1,500 맞춤</button>
         </div>
         <div style="margin-top:10px;" id="years-wrap">
           <div class="input-wrap"><input type="text" inputmode="numeric" id="years" value="20"><span class="input-unit">년간</span></div>
@@ -720,7 +721,7 @@
     </div>
 
     <details class="adv" id="adv">
-      <summary>고급 설정 (국민연금·다른 소득·가입 시점)</summary>
+      <summary data-member-click="고급 설정">고급 설정 (국민연금·다른 소득·가입 시점)</summary>
       <div class="adv-body">
         <div class="adv-why">이 칸들은 <b><span class="bn n3">3</span> 연금의 종합과세 비교</b>(1,500만원 이하면 저율 vs 종합과세, 넘으면 16.5% vs 종합과세)와 <b>연금수령한도</b> 계산에 쓰입니다. 비워 두면 '다른 소득 없음'으로 계산해요.</div>
 
@@ -986,13 +987,13 @@
     <div class="cap-vs" id="cap-vs"></div>
     <div class="cap-steps" id="cap-steps"></div>
     <div class="cap-actions">
-      <button type="button" class="btn-fill" id="apply-cap">1,500만원 맞춤 전략으로 계산해 보기</button>
+      <button type="button" class="btn-fill" id="apply-cap" data-member-click="1,500만원 맞춤 전략 적용">1,500만원 맞춤 전략으로 계산해 보기</button>
       <span class="cap-note" id="cap-note"></span>
     </div>
   </div>
 
   <!-- 희망 금액 계좌 나누기 설계 -->
-  <div class="card split-card" id="split-card">
+  <div class="card split-card" id="split-card" data-member="계좌 나누기 설계">
     <div class="step-label"><div class="step-line"></div><span class="step-text">1,500만원 + α 설계</span></div>
     <div class="step-title">1년에 1,500만원보다 더 필요하다면? 계좌를 나누세요</div>
     <div class="step-desc"><span class="bn n1">1</span> 세액공제 받지 않은 원금과 <span class="bn n2">2</span> 퇴직금은 <b>1,500만원 계산에 들어가지 않아요.</b> 그래서 <span class="bn n3">3</span>에서는 매년 1,500만원을 꽉 채워 받고, 모자란 만큼만 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서 보충하면 원하는 금액을 받으면서도 저율 3.3~5.5%를 지킬 수 있어요.</div>
@@ -1058,7 +1059,7 @@
   </div>
 
   <!-- 부부라면: 배우자 연금계좌 -->
-  <div class="card" id="couple-card">
+  <div class="card" id="couple-card" data-member="부부 배분 비교">
     <div class="step-label"><div class="step-line"></div><span class="step-text">부부라면</span></div>
     <div class="step-title">배우자 연금계좌도 있다면? 1,500만원 기준은 사람마다 따로예요</div>
     <div class="step-desc">연 1,500만원 기준과 연금소득세는 <b>1인당</b> 계산해요. 같은 돈이라도 한 사람 계좌에 몰려 있으면 1,500만원을 넘기 쉽고, 부부가 나눠 갖고 있으면 각자 기준 안에서 꺼낼 수 있어요. 위 STEP 01~03은 <b>본인 계좌만</b> 본 결과입니다.</div>
@@ -1110,7 +1111,7 @@
   </div>
 
   <!-- 건보료 체크 -->
-  <div class="card" id="nh-card">
+  <div class="card" id="nh-card" data-member="건보료 체크">
     <div class="step-label"><div class="step-line"></div><span class="step-text">건보료 체크</span></div>
     <div class="step-title">은퇴 후 건보료는? 연금저축·IRP에서 꺼낸 돈은 0원으로 잡혀요</div>
     <div class="step-desc">은퇴하면 회사 건강보험이 끝나고, 가족 직장보험의 <b>피부양자</b>가 되거나 <b>지역가입자</b>가 돼요. 지역가입자 건강보험료(건보료)는 공적연금·이자·배당·임대소득과 집에 붙고, <b>연금저축·IRP(사적연금)에서 받는 돈은 얼마를 받든 반영되지 않습니다.</b></div>
@@ -1168,7 +1169,7 @@
   </div>
 
   <!-- STEP 05 연도별 -->
-  <div class="card">
+  <div class="card" data-member="연도별 차트와 상세표">
     <div class="step-label"><div class="step-line"></div><span class="step-text">STEP 05</span></div>
     <div class="chart-head">
       <div>
@@ -1185,8 +1186,8 @@
         <span class="fold-btn"><span class="open-txt">펼치기 ▾</span><span class="close-txt">접기 ▴</span></span>
       </summary>
       <div class="dl-bar" style="margin-top:12px;">
-        <button type="button" class="dl-btn" id="dl-csv">CSV 내려받기</button>
-        <button type="button" class="dl-btn" id="dl-xlsx">엑셀(.xlsx) 내려받기</button>
+        <button type="button" class="dl-btn" id="dl-csv" data-member-click="엑셀 내려받기">CSV 내려받기</button>
+        <button type="button" class="dl-btn" id="dl-xlsx" data-member-click="엑셀 내려받기">엑셀(.xlsx) 내려받기</button>
         <span class="dl-note">내 계획의 연도별 표 + 받는 방법 비교표 (원 단위 숫자)</span>
       </div>
       <div class="table-wrap">
@@ -2109,6 +2110,11 @@ const GUIDE_URL = 'https://ttokjaetv.github.io/retire-check/';
   let q;
   try { q = new URLSearchParams(location.search); } catch (e) { return; }
   const ids = ['b1', 'b2', 'b3', 'ret-years', 'start-age', 'rate', 'years', 'amount', 'public', 'pub-start', 'other', 'elig-age'];
+  // 멤버십 잠금 중이어도 링크로 넘어온 고급 설정 값(은퇴 5년 전 점검 가이드 등 무료 도구에서 넘겨줌)은 그대로 받아 계산한다.
+  // 다만 잠긴 사람에게는 고급 설정 칸을 펼쳐 보여 주지 않는다. 꺼져 있으면 예전과 똑같다.
+  const ADV = ['public', 'pub-start', 'other', 'elig-age', 'pre2013'];
+  const advLocked = !!(window.TJLock && TJLock.locked());
+  const advAsked = ADV.some(k => q.has(k));
   let filled = 0;
   ids.forEach(id => {
     if (!q.has(id)) return;
@@ -2126,7 +2132,7 @@ const GUIDE_URL = 'https://ttokjaetv.github.io/retire-check/';
   if (q.has('amount')) pick('mode-seg', 'amount');
   else if (q.has('years')) pick('mode-seg', 'years');
   if (q.has('public')) pick('pub-mode', 'direct');
-  if (['public', 'pub-start', 'other', 'elig-age', 'pre2013'].some(k => q.has(k))) $('adv').open = true;
+  if (advAsked && !advLocked) $('adv').open = true;
   if (q.get('from') === 'guide') {
     const bar = document.createElement('div');
     bar.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;padding:14px 18px;margin-bottom:24px;font-size:14.5px;font-weight:700;line-height:1.6;';
