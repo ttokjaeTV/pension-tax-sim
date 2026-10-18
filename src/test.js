@@ -179,4 +179,13 @@ dp = E.nhDependent([{ pub: 0, fin: 0, other: 1, bizReg: true, taxBase: 0 }]);
 eq('사업자등록 있음·사업소득 1원 → 탈락', dp.ok ? 1 : 0, 0, 0);
 dp = E.nhDependent([{ pub: 1e7, fin: 0, other: 0, bizReg: true, taxBase: 0 }, { pub: 0, fin: 0, other: 6e6, taxBase: 0 }]);
 eq('배우자 사업소득 요건 탈락 → 부부 모두 탈락', dp.people[0].ok ? 1 : 0, 0, 0);
+// 20) 부부 공동명의 임대: 사업소득·재산 요건은 각자 지분으로 판정
+dp = E.nhDependent([{ pub: 0, fin: 0, other: 3e6, taxBase: 0 }, { pub: 0, fin: 0, other: 3e6, taxBase: 0 }]);
+eq('임대 300만+300만(미등록) → 부부 모두 통과', dp.ok ? 1 : 0, 1, 0);
+dp = E.nhDependent([{ pub: 0, fin: 0, other: 6e6, taxBase: 0 }, { pub: 0, fin: 0, other: 0, taxBase: 0 }]);
+eq('임대 600만이 한 명에게 몰리면 → 부부 모두 탈락', dp.ok ? 1 : 0, 0, 0);
+dp = E.nhDependent([{ pub: 0, fin: 0, other: 0, taxBase: 0 }, { pub: 0, fin: 0, other: 3e6, bizReg: true, taxBase: 0 }]);
+eq('배우자만 사업자등록·임대 300만 → 부부 모두 탈락', dp.ok ? 1 : 0, 0, 0);
+dp = E.nhDependent([{ pub: 1.2e7, fin: 0, other: 0, taxBase: 4e8 }, { pub: 0, fin: 0, other: 0, taxBase: 4e8 }]);
+eq('과표 8억 반반 공동명의 → 각자 4억이라 통과', dp.ok ? 1 : 0, 1, 0);
 console.log(fail ? `\n${fail} FAIL` : '\nALL PASS');

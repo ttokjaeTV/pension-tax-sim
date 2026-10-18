@@ -1122,34 +1122,45 @@
         <div class="input-hint">국민연금·공무원연금 등 전액 (2002년 이전 분 포함)</div>
       </div>
       <div>
-        <label class="label">배우자 공적연금 (월)</label>
-        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-sp-pub" data-man value="0"><span class="input-unit">만원</span></div>
-        <div class="input-hint">1인 가구면 0</div>
-      </div>
-      <div>
-        <label class="label">임대·사업 등 다른 소득 (연, 부부 합계)</label>
-        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-other" data-man value="0"><span class="input-unit">만원</span></div>
-        <div class="input-hint">경비 뺀 소득금액</div>
-      </div>
-      <div>
         <label class="label">본인 이자·배당 (연, 일반계좌)</label>
         <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-fin" data-man value="0"><span class="input-unit">만원</span></div>
         <div class="input-hint">1인 1,000만원 넘으면 전액 반영</div>
+      </div>
+      <div>
+        <label class="label">본인 임대·사업 등 다른 소득 (연)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-other" data-man value="0"><span class="input-unit">만원</span></div>
+        <div class="input-hint">경비 뺀 소득금액 · 공동명의 임대는 내 지분만</div>
+      </div>
+      <div>
+        <label class="label">배우자 공적연금 (월)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-sp-pub" data-man value="0"><span class="input-unit">만원</span></div>
+        <div class="input-hint">1인 가구면 배우자 칸은 모두 0</div>
       </div>
       <div>
         <label class="label">배우자 이자·배당 (연)</label>
         <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-sp-fin" data-man value="0"><span class="input-unit">만원</span></div>
       </div>
       <div>
+        <label class="label">배우자 임대·사업 등 다른 소득 (연)</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-sp-other" data-man value="0"><span class="input-unit">만원</span></div>
+        <div class="input-hint">경비 뺀 소득금액 · 공동명의 임대는 배우자 지분만</div>
+      </div>
+      <div>
         <label class="label">집 공시가격 합계</label>
         <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-house" data-man value="40,000"><span class="input-unit">만원</span></div>
         <div class="input-hint">시세가 아니라 공시가격 (부동산 공시가격 알리미에서 조회). 무주택이면 0</div>
       </div>
+      <div>
+        <label class="label">그중 배우자 명의 지분</label>
+        <div class="input-wrap"><input type="text" inputmode="numeric" id="nh-sp-share" value="0"><span class="input-unit">%</span></div>
+        <div class="input-hint">전부 본인 명의면 0, 부부 공동명의 반반이면 50</div>
+      </div>
     </div>
     <div class="grid-2" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
       <label class="check"><input type="checkbox" id="nh-multi"><span>집이 2채 이상이에요<small>1주택 특례(과세표준 = 공시가격의 43~45%) 대신 60%로 계산해요</small></span></label>
-      <label class="check"><input type="checkbox" id="nh-dep"><span>자녀 등 가족 중 직장가입자가 있어요<small>피부양자로 올라갈 수 있는지 함께 따져 봐요 (집은 본인 명의로 봐요)</small></span></label>
-      <label class="check"><input type="checkbox" id="nh-bizreg"><span>사업자등록(임대사업자 포함)이 있어요<small>피부양자 판정 때 사업소득이 1원이라도 있으면 탈락해요 (없으면 연 500만원까지)</small></span></label>
+      <label class="check"><input type="checkbox" id="nh-dep"><span>자녀 등 가족 중 직장가입자가 있어요<small>피부양자로 올라갈 수 있는지 부부 각자 따져 봐요</small></span></label>
+      <label class="check"><input type="checkbox" id="nh-bizreg"><span>본인 사업자등록(임대사업자 포함)이 있어요<small>피부양자 판정 때 사업소득이 1원이라도 있으면 탈락해요 (없으면 연 500만원까지)</small></span></label>
+      <label class="check"><input type="checkbox" id="nh-sp-bizreg"><span>배우자 사업자등록(임대사업자 포함)이 있어요<small>사업소득 요건은 부부 각자 따로 봐요</small></span></label>
     </div>
     <div class="nh-out" id="nh-out"></div>
   </div>
@@ -1670,8 +1681,11 @@ function renderNh(p, mine) {
     nhSynced = true;
   }
   const pubMe = Math.max(0, num('nh-pub')) * 12, pubSp = Math.max(0, num('nh-sp-pub')) * 12;
-  const finMe = Math.max(0, num('nh-fin')), finSp = Math.max(0, num('nh-sp-fin')), other = Math.max(0, num('nh-other'));
-  const multi = $('nh-multi').checked, tbase = houseTaxBase(Math.max(0, num('nh-house')), multi);
+  const finMe = Math.max(0, num('nh-fin')), finSp = Math.max(0, num('nh-sp-fin'));
+  const otherMe = Math.max(0, num('nh-other')), otherSp = Math.max(0, num('nh-sp-other')), other = otherMe + otherSp;
+  const multi = $('nh-multi').checked, tbase = houseTaxBase(Math.max(0, num('nh-house')), multi);   // 지역가입자 재산은 세대 합산
+  const spShare = Math.min(100, Math.max(0, num('nh-sp-share'))) / 100;                            // 피부양자 재산 요건은 각자 지분으로
+  const tbaseMe = tbase * (1 - spShare), tbaseSp = tbase * spShare;
   const R = nhRegional({ pub: [pubMe, pubSp], fin: [finMe, finSp], other, taxBase: tbase });
   const won = v => Math.round(v).toLocaleString() + '원';
   let h = `<div class="nh-box dark"><div class="nh-k">지역가입자라면 (부부 한 세대)</div><div class="nh-v">월 ${won(R.total)}</div>
@@ -1684,14 +1698,21 @@ function renderNh(p, mine) {
   h += `<div class="nh-box"><div class="nh-k">연금계좌에서 꺼낸 돈의 건보료</div><div class="nh-v">0원</div>
     <div class="nh-s">내 계획 첫해 인출액 <b>${fmtMan(w0)}</b>은 건보료에 잡히지 않아요. 같은 금액을 <b>일반계좌 이자·배당</b>으로 받았다면 건보료가 <b>월 ${won(Math.max(0, R2.total - R.total))}</b> 더 나왔을 거예요${finMe + w0 > 2e7 ? ' (금융소득종합과세 대상이 되는 세금은 별도)' : ''}.</div></div>`;
   if ($('nh-dep').checked) {
-    const D = nhDependent([{ pub: pubMe, fin: finMe, other, bizReg: $('nh-bizreg').checked, taxBase: tbase }, ...(pubSp + finSp > 0 || num('sp-b3') > 0 ? [{ pub: pubSp, fin: finSp, other: 0, taxBase: 0 }] : [])]);
-    const me = D.people[0];
+    const spBizReg = $('nh-sp-bizreg').checked;
+    const hasSp = pubSp + finSp + otherSp > 0 || spShare > 0 || spBizReg || num('sp-b3') > 0;
+    const D = nhDependent([{ pub: pubMe, fin: finMe, other: otherMe, bizReg: $('nh-bizreg').checked, taxBase: tbaseMe },
+      ...(hasSp ? [{ pub: pubSp, fin: finSp, other: otherSp, bizReg: spBizReg, taxBase: tbaseSp }] : [])]);
+    const me = D.people[0], sp = D.people[1];
     const li = [];
-    li.push(`본인 소득 ${fmtMan(me.inc)} ${me.inc <= NH.depIncome ? '≤' : '>'} 2,000만원${D.people[1] ? ` · 배우자 ${fmtMan(D.people[1].inc)}` : ''}${D.incAll ? '' : ' → 소득 요건은 부부를 함께 봐서 <b>둘 다 탈락</b>'}`);
-    if (me.biz > 0 || me.bizReg) li.push(me.bizReg
-      ? `사업자등록 있음 — 임대·사업소득 ${fmtMan(me.biz)} ${me.bizOk ? '(0원이라 통과)' : '→ 1원이라도 있으면 <b>탈락</b>'}`
-      : `사업자등록 없음 — 임대·사업소득 ${fmtMan(me.biz)} ${me.bizOk ? '≤ 500만원 → 통과' : '> 500만원 → <b>탈락</b>'}`);
-    li.push(`집 과세표준 ${fmtMan(tbase)} ${tbase <= NH.depProp1 ? '≤ 5.4억원 → 통과' : tbase <= NH.depProp2 ? `(5.4억~9억) → 소득 ${me.inc <= NH.depPropIncome ? '1,000만원 이하라 통과' : '1,000만원 초과라 탈락'}` : '> 9억원 → 탈락'}`);
+    const incTxt = x => x.inc <= NH.depIncome ? '→ 통과' : '→ <b>탈락</b>';
+    li.push(`본인 소득 ${fmtMan(me.inc)} ${incTxt(me)}${sp ? ` · 배우자 ${fmtMan(sp.inc)} ${incTxt(sp)}` : ''} (각자 2,000만원 이하)${D.incAll ? '' : ' → 소득·사업소득 요건은 한 명만 걸려도 <b>부부 둘 다 탈락</b>'}`);
+    const bizLine = (who, x) => x.bizReg
+      ? `${who} 사업자등록 있음 — 임대·사업소득 ${fmtMan(x.biz)} ${x.bizOk ? '(0원이라 통과)' : '→ 1원이라도 있으면 <b>탈락</b>'}`
+      : `${who} 사업자등록 없음 — 임대·사업소득 ${fmtMan(x.biz)} ${x.bizOk ? '≤ 500만원 → 통과' : '> 500만원 → <b>탈락</b>'}`;
+    if (me.biz > 0 || me.bizReg) li.push(bizLine('본인', me));
+    if (sp && (sp.biz > 0 || sp.bizReg)) li.push(bizLine('배우자', sp));
+    const propLine = (who, x) => `${who} 집 과세표준 ${fmtMan(x.tb)} ${x.tb <= NH.depProp1 ? '≤ 5.4억원 → 통과' : x.tb <= NH.depProp2 ? `(5.4억~9억) → 소득 ${x.inc <= NH.depPropIncome ? '1,000만원 이하라 통과' : '1,000만원 초과라 탈락'}` : '> 9억원 → 탈락'}`;
+    li.push(propLine(sp && spShare > 0 ? '본인 지분' : '본인', me) + (sp && spShare > 0 ? ' · ' + propLine('배우자 지분', sp).replace(/^배우자 지분 집 /, '배우자 지분 ') : '') + (sp ? ' (재산 요건은 각자 따로)' : ''));
     h += `<div class="nh-box wide"><div class="nh-k">피부양자로 올라갈 수 있나요?<span class="nh-tag ${D.ok ? 'ok' : 'no'}">${D.ok ? '부부 모두 가능' : (D.people.some(x => x.ok) ? '일부만 가능' : '탈락 → 지역가입자')}</span></div>
       <ul style="margin-top:6px;">${li.map(x => `<li>${x}</li>`).join('')}</ul>
       <div class="nh-s" style="margin-top:6px;">피부양자는 보험료가 0원이에요. 부양 관계·소득 종류별 세부 요건이 더 있으니, 정확한 판정은 국민건강보험공단(1577-1000)에서 확인하세요.</div></div>`;
