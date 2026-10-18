@@ -1599,8 +1599,16 @@ function simulate(p) {
     const over = out.b1 + out.b2 + out.b3;
 
     // 남은 돈 운용 (운용수익은 ③ 바구니로)
+    // 운용손실로 원금에 못 미치면 원금을 인출 순서의 반대(③ → ② → ①)로 차감 (소득세법 시행령 제40조의3 제5항) — 바구니가 음수가 되지 않게
     const remainBal = b1 + b2 + b3;
-    b3 += remainBal * r;
+    const gain = remainBal * r;
+    if (gain >= 0) b3 += gain;
+    else {
+      let loss = -gain;
+      const l3 = Math.min(b3, loss); b3 -= l3; loss -= l3;
+      const l2 = Math.min(b2, loss); b2 -= l2; loss -= l2;
+      b1 -= Math.min(b1, loss);
+    }
 
     rows.push({
       n, age, limitYear, startBal, limit, w,
