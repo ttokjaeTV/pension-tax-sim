@@ -264,7 +264,7 @@ const NH = {
   perPoint: 211.5, propDed: 1e8,          // 재산 부과점수당 금액 · 재산 기본공제
   finMin: 10e6,                           // 이자·배당 1인 연 1,000만원 이하면 건보료 소득 제외(넘으면 전액)
   pubRate: 0.5,                           // 지역가입자 공적연금 반영 비율
-  depIncome: 20e6, depProp1: 5.4e8, depProp2: 9e8, depPropIncome: 10e6,
+  depIncome: 20e6, depBiz: 5e6, depProp1: 5.4e8, depProp2: 9e8, depPropIncome: 10e6,
 };
 // [재산금액 상한(만원), 점수] 1~60등급
 const NH_PROP = [[450,22],[900,44],[1350,66],[1800,97],[2250,122],[2700,146],[3150,171],[3600,195],[4050,219],[4500,244],
@@ -306,14 +306,17 @@ function nhRegional(o) {
 
 /* 피부양자 요건 (가족 중 직장가입자가 있을 때)
    people = [{ pub, fin, other, taxBase }] — 소득: 공적연금 100% + 금융소득(1,000만원 넘으면 전액) + 기타. 사적연금 제외.
-   소득 요건은 부부를 함께(한 명이 넘으면 둘 다 탈락), 재산 요건은 각자 명의 기준 */
+   소득 요건은 부부를 함께(한 명이 넘으면 둘 다 탈락), 재산 요건은 각자 명의 기준
+   other(임대·사업 등)는 사업소득으로 보고 별도 요건도 본다: 사업자등록 있으면 0원이어야, 없으면 연 500만원 이하 (fin-income-tax·etf-vs-direct와 같은 규칙) */
 function nhDependent(people) {
   const res = people.map(p => {
-    const inc = Math.max(0, p.pub || 0) + nhFin(Math.max(0, p.fin || 0)) + Math.max(0, p.other || 0);
+    const biz = Math.max(0, p.other || 0);
+    const inc = Math.max(0, p.pub || 0) + nhFin(Math.max(0, p.fin || 0)) + biz;
     const tb = p.taxBase || 0;
-    const incOk = inc <= NH.depIncome;
+    const bizOk = p.bizReg ? biz <= 0 : biz <= NH.depBiz;
+    const incOk = inc <= NH.depIncome && bizOk;
     const propOk = tb <= NH.depProp1 || (tb <= NH.depProp2 && inc <= NH.depPropIncome);
-    return { inc, tb, incOk, propOk };
+    return { inc, biz, bizReg: !!p.bizReg, tb, bizOk, incOk, propOk };
   });
   const incAll = res.every(r => r.incOk);
   res.forEach(r => { r.ok = incAll && r.propOk; });

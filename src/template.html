@@ -1149,6 +1149,7 @@
     <div class="grid-2" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
       <label class="check"><input type="checkbox" id="nh-multi"><span>집이 2채 이상이에요<small>1주택 특례(과세표준 = 공시가격의 43~45%) 대신 60%로 계산해요</small></span></label>
       <label class="check"><input type="checkbox" id="nh-dep"><span>자녀 등 가족 중 직장가입자가 있어요<small>피부양자로 올라갈 수 있는지 함께 따져 봐요 (집은 본인 명의로 봐요)</small></span></label>
+      <label class="check"><input type="checkbox" id="nh-bizreg"><span>사업자등록(임대사업자 포함)이 있어요<small>피부양자 판정 때 사업소득이 1원이라도 있으면 탈락해요 (없으면 연 500만원까지)</small></span></label>
     </div>
     <div class="nh-out" id="nh-out"></div>
   </div>
@@ -1629,7 +1630,15 @@ function renderCouple(p) {
   const wMe = W * totMe / tot, wSp = W * totSp / tot;
   const base = { r: p.r, mode: 'split', capAmount: 15000000, otherIncome: p.otherIncome, pre2013: false };
   const me = simulate({ ...p, ...base, desired: Math.max(100000, wMe) });
-  const sp = simulate({ ...base, startAge: spStart, eligAge: spStart, b1: sb1, b2: sb2, retTaxNat: sRet, b3: sb3,
+  // 배우자가 55세가 될 때까지 기다리는 동안에도 계좌는 굴러간다: 수익은 ③으로, 손실은 ③→②→① 순으로 차감 (시행령 제40조의3 제5항)
+  let wb1 = sb1, wb2 = sb2, wb3 = sb3;
+  const waitYears = spStart - spAge0;
+  if (waitYears > 0) {
+    const g = (sb1 + sb2 + sb3) * (Math.pow(1 + p.r, waitYears) - 1);
+    if (g >= 0) wb3 += g;
+    else { let loss = -g; const l3 = Math.min(wb3, loss); wb3 -= l3; loss -= l3; const l2 = Math.min(wb2, loss); wb2 -= l2; loss -= l2; wb1 -= Math.min(wb1, loss); }
+  }
+  const sp = simulate({ ...base, startAge: spStart, eligAge: spStart, b1: wb1, b2: wb2, retTaxNat: sRet, b3: wb3,
     desired: Math.max(100000, wSp), publicPension: Math.max(0, num('sp-pub')), publicStartAge: p.publicStartAge - diff, otherIncome: 0 });
   const one = simulate({ ...p, ...base, b1: p.b1 + sb1, b2: p.b2 + sb2, retTaxNat: p.retTaxNat + sRet, b3: p.b3 + sb3, desired: W });
   const each = {
@@ -1647,7 +1656,7 @@ function renderCouple(p) {
   const dEff = o.eff - each.eff;
   if (dEff > 0.0005) al.push(['ok', `<b>부부가 나눠 갖고 있어서 실효세율이 ${pct(o.eff)} → ${pct(each.eff)}로 낮아져요.</b> ${each.keep > o.keep ? `원하는 금액도 ${o.keep}년 → <b>${each.keep}년</b> 동안 이어져요(각자 <span class="bn n3">3</span>에서 1,500만원씩 꺼낼 수 있어서). ` : ''}${o.high ? `한 사람 계좌였다면 <span class="bn n3">3</span>에서 받는 돈이 ${o.high}년 동안 1,500만원을 넘었을 거예요.` : ''}`]);
   else al.push(['info', `<b>이 금액에서는 나눠 가져도 세금 차이가 거의 없어요.</b> 한 사람 계좌만으로도 <span class="bn n3">3</span>에서 받는 돈이 1,500만원 안에 들어오기 때문이에요. 원하는 금액을 늘리면 차이가 생겨요.`]);
-  if (spAge0 < 55) al.push(['warn', `본인이 ${p.startAge}세에 개시할 때 배우자는 ${spAge0}세라 아직 연금을 받을 수 없어요. 배우자 계좌는 <b>55세(${55 - spAge0}년 뒤)</b>부터 받는 것으로 계산했어요.`]);
+  if (spAge0 < 55) al.push(['warn', `본인이 ${p.startAge}세에 개시할 때 배우자는 ${spAge0}세라 아직 연금을 받을 수 없어요. 배우자 계좌는 <b>55세(${55 - spAge0}년 뒤)</b>부터 받는 것으로, 기다리는 동안 수익률 ${pct(p.r)}로 굴러간 금액(<b>${fmtMan(wb1 + wb2 + wb3)}</b>)으로 계산했어요.`]);
   $('cp-alerts').innerHTML = al.map(([k, h]) => `<div class="alert ${k}"><span class="ic">${k === 'ok' ? '✓' : k === 'warn' ? '!' : 'i'}</span><div>${h}</div></div>`).join('');
 }
 
@@ -1675,14 +1684,17 @@ function renderNh(p, mine) {
   h += `<div class="nh-box"><div class="nh-k">연금계좌에서 꺼낸 돈의 건보료</div><div class="nh-v">0원</div>
     <div class="nh-s">내 계획 첫해 인출액 <b>${fmtMan(w0)}</b>은 건보료에 잡히지 않아요. 같은 금액을 <b>일반계좌 이자·배당</b>으로 받았다면 건보료가 <b>월 ${won(Math.max(0, R2.total - R.total))}</b> 더 나왔을 거예요${finMe + w0 > 2e7 ? ' (금융소득종합과세 대상이 되는 세금은 별도)' : ''}.</div></div>`;
   if ($('nh-dep').checked) {
-    const D = nhDependent([{ pub: pubMe, fin: finMe, other, taxBase: tbase }, ...(pubSp + finSp > 0 || num('sp-b3') > 0 ? [{ pub: pubSp, fin: finSp, other: 0, taxBase: 0 }] : [])]);
+    const D = nhDependent([{ pub: pubMe, fin: finMe, other, bizReg: $('nh-bizreg').checked, taxBase: tbase }, ...(pubSp + finSp > 0 || num('sp-b3') > 0 ? [{ pub: pubSp, fin: finSp, other: 0, taxBase: 0 }] : [])]);
     const me = D.people[0];
     const li = [];
     li.push(`본인 소득 ${fmtMan(me.inc)} ${me.inc <= NH.depIncome ? '≤' : '>'} 2,000만원${D.people[1] ? ` · 배우자 ${fmtMan(D.people[1].inc)}` : ''}${D.incAll ? '' : ' → 소득 요건은 부부를 함께 봐서 <b>둘 다 탈락</b>'}`);
+    if (me.biz > 0 || me.bizReg) li.push(me.bizReg
+      ? `사업자등록 있음 — 임대·사업소득 ${fmtMan(me.biz)} ${me.bizOk ? '(0원이라 통과)' : '→ 1원이라도 있으면 <b>탈락</b>'}`
+      : `사업자등록 없음 — 임대·사업소득 ${fmtMan(me.biz)} ${me.bizOk ? '≤ 500만원 → 통과' : '> 500만원 → <b>탈락</b>'}`);
     li.push(`집 과세표준 ${fmtMan(tbase)} ${tbase <= NH.depProp1 ? '≤ 5.4억원 → 통과' : tbase <= NH.depProp2 ? `(5.4억~9억) → 소득 ${me.inc <= NH.depPropIncome ? '1,000만원 이하라 통과' : '1,000만원 초과라 탈락'}` : '> 9억원 → 탈락'}`);
     h += `<div class="nh-box wide"><div class="nh-k">피부양자로 올라갈 수 있나요?<span class="nh-tag ${D.ok ? 'ok' : 'no'}">${D.ok ? '부부 모두 가능' : (D.people.some(x => x.ok) ? '일부만 가능' : '탈락 → 지역가입자')}</span></div>
       <ul style="margin-top:6px;">${li.map(x => `<li>${x}</li>`).join('')}</ul>
-      <div class="nh-s" style="margin-top:6px;">피부양자는 보험료가 0원이에요. 사업자등록이 있으면 사업소득이 1원만 있어도 탈락하는 등 세부 요건이 더 있으니, 정확한 판정은 국민건강보험공단(1577-1000)에서 확인하세요.</div></div>`;
+      <div class="nh-s" style="margin-top:6px;">피부양자는 보험료가 0원이에요. 부양 관계·소득 종류별 세부 요건이 더 있으니, 정확한 판정은 국민건강보험공단(1577-1000)에서 확인하세요.</div></div>`;
   }
   h += `<div class="nh-box wide" style="background:transparent; padding:4px 2px;"><div class="nh-s" style="color:var(--ink-mute); font-size:12.5px;">2026년 기준 추정입니다: 건강보험료율 7.19%, 장기요양 0.9448%(소득 대비), 지역가입자 공적연금 50% 반영, 이자·배당은 1인 연 1,000만원 넘으면 전액, 재산은 주택 과세표준에서 1억원 공제 후 등급 점수 × 211.5원. 전월세 보증금·토지·세대원 근로소득은 넣지 않았고, 실제 보험료는 전년도 소득 자료로 매겨져요.</div></div>`;
   $('nh-out').innerHTML = h;

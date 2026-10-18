@@ -170,4 +170,13 @@ eq('배우자도 탈락(소득은 부부 함께)', dp.people[1].ok ? 1 : 0, 0, 0
 dp = E.nhDependent([{ pub: 1.8e7, fin: 0, other: 0, taxBase: 6e8 }, { pub: 0, fin: 0, other: 0, taxBase: 0 }]);
 eq('재산 6억·소득 1,800만 → 본인 탈락', dp.people[0].ok ? 1 : 0, 0, 0);
 eq('재산 요건은 각자 → 배우자 유지', dp.people[1].ok ? 1 : 0, 1, 0);
+// 19) 피부양자 사업소득 요건: 사업자등록 있으면 0원, 없으면 500만원 이하
+dp = E.nhDependent([{ pub: 0, fin: 0, other: 6e6, taxBase: 0 }]);
+eq('임대 600만·사업자등록 없음 → 500만 초과 탈락', dp.ok ? 1 : 0, 0, 0);
+dp = E.nhDependent([{ pub: 0, fin: 0, other: 5e6, taxBase: 0 }]);
+eq('임대 500만·사업자등록 없음 → 통과', dp.ok ? 1 : 0, 1, 0);
+dp = E.nhDependent([{ pub: 0, fin: 0, other: 1, bizReg: true, taxBase: 0 }]);
+eq('사업자등록 있음·사업소득 1원 → 탈락', dp.ok ? 1 : 0, 0, 0);
+dp = E.nhDependent([{ pub: 1e7, fin: 0, other: 0, bizReg: true, taxBase: 0 }, { pub: 0, fin: 0, other: 6e6, taxBase: 0 }]);
+eq('배우자 사업소득 요건 탈락 → 부부 모두 탈락', dp.people[0].ok ? 1 : 0, 0, 0);
 console.log(fail ? `\n${fail} FAIL` : '\nALL PASS');
