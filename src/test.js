@@ -188,4 +188,9 @@ dp = E.nhDependent([{ pub: 0, fin: 0, other: 0, taxBase: 0 }, { pub: 0, fin: 0, 
 eq('배우자만 사업자등록·임대 300만 → 부부 모두 탈락', dp.ok ? 1 : 0, 0, 0);
 dp = E.nhDependent([{ pub: 1.2e7, fin: 0, other: 0, taxBase: 4e8 }, { pub: 0, fin: 0, other: 0, taxBase: 4e8 }]);
 eq('과표 8억 반반 공동명의 → 각자 4억이라 통과', dp.ok ? 1 : 0, 1, 0);
+// 21) 주택임대소득은 사업자등록이 없어도 500만원 예외 없음 (별표 1의2) — 화면 체크박스 '사업자등록 또는 주택임대소득'
+dp = E.nhDependent([{ pub: 0, fin: 0, other: 3e6, bizReg: true, taxBase: 0 }]);
+eq('주택임대 300만(미등록, 체크) → 탈락', dp.ok ? 1 : 0, 0, 0);
+dp = E.nhDependent([{ pub: 0, fin: 0, other: 3e6, bizReg: false, taxBase: 0 }]);
+eq('상가 임대 등 300만(미등록·주택임대 아님) → 통과', dp.ok ? 1 : 0, 1, 0);
 console.log(fail ? `\n${fail} FAIL` : '\nALL PASS');

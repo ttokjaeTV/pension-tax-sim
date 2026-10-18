@@ -1159,8 +1159,8 @@
     <div class="grid-2" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
       <label class="check"><input type="checkbox" id="nh-multi"><span>집이 2채 이상이에요<small>1주택 특례(과세표준 = 공시가격의 43~45%) 대신 60%로 계산해요</small></span></label>
       <label class="check"><input type="checkbox" id="nh-dep"><span>자녀 등 가족 중 직장가입자가 있어요<small>피부양자로 올라갈 수 있는지 부부 각자 따져 봐요</small></span></label>
-      <label class="check"><input type="checkbox" id="nh-bizreg"><span>본인 사업자등록(임대사업자 포함)이 있어요<small>피부양자 판정 때 사업소득이 1원이라도 있으면 탈락해요 (없으면 연 500만원까지)</small></span></label>
-      <label class="check"><input type="checkbox" id="nh-sp-bizreg"><span>배우자 사업자등록(임대사업자 포함)이 있어요<small>사업소득 요건은 부부 각자 따로 봐요</small></span></label>
+      <label class="check"><input type="checkbox" id="nh-bizreg"><span>본인 사업자등록이 있거나 주택임대소득이 있어요<small>하나라도 해당하면 사업소득이 1원만 있어도 피부양자 탈락 (주택임대는 등록 안 해도 해당). 상가 임대 등만 있고 등록이 없으면 연 500만원까지</small></span></label>
+      <label class="check"><input type="checkbox" id="nh-sp-bizreg"><span>배우자 사업자등록이 있거나 주택임대소득이 있어요<small>사업소득 요건은 부부 각자 따로 봐요 (기준은 본인과 같음)</small></span></label>
     </div>
     <div class="nh-out" id="nh-out"></div>
   </div>
@@ -1698,7 +1698,7 @@ function nhRegional(o) {
 /* 피부양자 요건 (가족 중 직장가입자가 있을 때)
    people = [{ pub, fin, other, taxBase }] — 소득: 공적연금 100% + 금융소득(1,000만원 넘으면 전액) + 기타. 사적연금 제외.
    소득 요건은 부부를 함께(한 명이 넘으면 둘 다 탈락), 재산 요건은 각자 명의 기준
-   other(임대·사업 등)는 사업소득으로 보고 별도 요건도 본다: 사업자등록 있으면 0원이어야, 없으면 연 500만원 이하 (fin-income-tax·etf-vs-direct와 같은 규칙) */
+   other(임대·사업 등)는 사업소득으로 보고 별도 요건도 본다: 사업자등록이 있거나 주택임대소득이 있으면 0원이어야, 둘 다 없으면 연 500만원 이하 (시행규칙 별표 1의2: 미등록 500만원 예외에서 주택임대소득은 제외) (fin-income-tax·etf-vs-direct와 같은 규칙) */
 function nhDependent(people) {
   const res = people.map(p => {
     const biz = Math.max(0, p.other || 0);
@@ -2037,8 +2037,8 @@ function renderNh(p, mine) {
     const incTxt = x => x.inc <= NH.depIncome ? '→ 통과' : '→ <b>탈락</b>';
     li.push(`본인 소득 ${fmtMan(me.inc)} ${incTxt(me)}${sp ? ` · 배우자 ${fmtMan(sp.inc)} ${incTxt(sp)}` : ''} (각자 2,000만원 이하)${D.incAll ? '' : ' → 소득·사업소득 요건은 한 명만 걸려도 <b>부부 둘 다 탈락</b>'}`);
     const bizLine = (who, x) => x.bizReg
-      ? `${who} 사업자등록 있음 — 임대·사업소득 ${fmtMan(x.biz)} ${x.bizOk ? '(0원이라 통과)' : '→ 1원이라도 있으면 <b>탈락</b>'}`
-      : `${who} 사업자등록 없음 — 임대·사업소득 ${fmtMan(x.biz)} ${x.bizOk ? '≤ 500만원 → 통과' : '> 500만원 → <b>탈락</b>'}`;
+      ? `${who} 사업자등록 또는 주택임대 있음 — 임대·사업소득 ${fmtMan(x.biz)} ${x.bizOk ? '(0원이라 통과)' : '→ 1원이라도 있으면 <b>탈락</b>'}`
+      : `${who} 사업자등록·주택임대 없음 — 임대·사업소득 ${fmtMan(x.biz)} ${x.bizOk ? '≤ 500만원 → 통과' : '> 500만원 → <b>탈락</b>'}`;
     if (me.biz > 0 || me.bizReg) li.push(bizLine('본인', me));
     if (sp && (sp.biz > 0 || sp.bizReg)) li.push(bizLine('배우자', sp));
     const propLine = (who, x) => `${who} 집 과세표준 ${fmtMan(x.tb)} ${x.tb <= NH.depProp1 ? '≤ 5.4억원 → 통과' : x.tb <= NH.depProp2 ? `(5.4억~9억) → 소득 ${x.inc <= NH.depPropIncome ? '1,000만원 이하라 통과' : '1,000만원 초과라 탈락'}` : '> 9억원 → 탈락'}`;

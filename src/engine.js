@@ -307,7 +307,7 @@ function nhRegional(o) {
 /* 피부양자 요건 (가족 중 직장가입자가 있을 때)
    people = [{ pub, fin, other, taxBase }] — 소득: 공적연금 100% + 금융소득(1,000만원 넘으면 전액) + 기타. 사적연금 제외.
    소득 요건은 부부를 함께(한 명이 넘으면 둘 다 탈락), 재산 요건은 각자 명의 기준
-   other(임대·사업 등)는 사업소득으로 보고 별도 요건도 본다: 사업자등록 있으면 0원이어야, 없으면 연 500만원 이하 (fin-income-tax·etf-vs-direct와 같은 규칙) */
+   other(임대·사업 등)는 사업소득으로 보고 별도 요건도 본다: 사업자등록이 있거나 주택임대소득이 있으면 0원이어야, 둘 다 없으면 연 500만원 이하 (시행규칙 별표 1의2: 미등록 500만원 예외에서 주택임대소득은 제외) (fin-income-tax·etf-vs-direct와 같은 규칙) */
 function nhDependent(people) {
   const res = people.map(p => {
     const biz = Math.max(0, p.other || 0);
