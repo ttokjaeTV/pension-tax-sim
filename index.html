@@ -1308,7 +1308,15 @@
   </footer>
 </div>
 
+<!-- 공용 제도 상수(세율·한도·건보료 요율). 아래 엔진·화면 스크립트보다 먼저 불러야 함 -->
+<script src="https://ttokjaetv.github.io/rules/v2026.1/rules.js"></script>
 <script>
+if (!window.TTOKJAE_RULES) {
+  var TJR_MSG = '기준값 파일(rules.js)을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로고침해 주세요.';
+  var tjrShow = function () { document.body.insertAdjacentHTML('afterbegin', '<div role="alert" style="background:#fdecea;color:#b3261e;padding:12px 16px;text-align:center;font-weight:600">' + TJR_MSG + '</div>'); };
+  document.body ? tjrShow() : document.addEventListener('DOMContentLoaded', tjrShow);
+  throw new Error(TJR_MSG);
+}
 // ============== 표 내려받기 (CSV · 엑셀 .xlsx) — 외부 라이브러리 없이 동작 ==============
 // TJX.csv('파일이름', rows) · TJX.xlsx('파일이름', [{ name: '시트', rows, widths }])
 // rows = [[머리글...], [값...], ...]  숫자는 숫자 그대로 넣으면 엑셀에서 계산 가능한 숫자 칸이 됩니다
@@ -1390,52 +1398,49 @@ const TJX = (() => {
 })();
 
 /* ===== 연금인출 세금 엔진 (2026년 세법 기준) ===== */
+/* 제도 숫자(세율·한도·구간표·건보료 요율)는 공용 기준 파일 rules.js의 전역 TTOKJAE_RULES에서 읽는다.
+   → 이 파일보다 먼저 <script src="https://ttokjaetv.github.io/rules/v2026.1/rules.js"> 를 불러야 함 (Node 테스트는 global.TTOKJAE_RULES). */
 /* 주의: 은퇴 5년 전 점검 가이드(ttokjaeTV/retire-check)가 이 파일(src/engine.js)을 직접 불러 4단계 세금을 계산합니다.
    simulate · retirementTax 함수 이름과 입력·출력 형식을 바꾸면 가이드도 같이 확인하세요. */
 const RULE = {
-  LOCAL: 1.1,                 // 지방소득세 10% 가산
-  SEP_LIMIT: 15000000,        // 사적연금 저율 분리과세 기준 (연)
-  SEP_RATE: 0.15,             // 1,500만원 초과 시 선택 분리과세 (국세)
-  OTHER_RATE: 0.15,           // 연금외수령 기타소득세 (국세)
-  BASIC_DEDUCTION: 1500000,   // 본인 기본공제
-  ELDER_DEDUCTION: 1000000,   // 경로우대공제 (70세 이상, 소득세법 51조①1호)
-  STD_CREDIT: 70000,          // 표준세액공제 (근로소득 없는 종합소득자, 소득세법 59조의4⑨2호나목)
+  LOCAL: 1 + TTOKJAE_RULES.INCOME_TAX.local,                  // 지방소득세 10% 가산 (1.1)
+  SEP_LIMIT: TTOKJAE_RULES.PENSION.separateLimit,             // 사적연금 저율 분리과세 기준 (연 1,500만원)
+  SEP_RATE: TTOKJAE_RULES.PENSION.separateRateNational,       // 1,500만원 초과 시 선택 분리과세 (국세 15%)
+  OTHER_RATE: TTOKJAE_RULES.PENSION.otherIncomeRateNational,  // 연금외수령 기타소득세 (국세 15%)
+  BASIC_DEDUCTION: TTOKJAE_RULES.INCOME_TAX.basicDeduction,   // 본인 기본공제 (150만원)
+  ELDER_DEDUCTION: TTOKJAE_RULES.INCOME_TAX.elderDeduction,   // 경로우대공제 (70세 이상 100만원, 소득세법 51조①1호)
+  STD_CREDIT: TTOKJAE_RULES.INCOME_TAX.standardTaxCredit,     // 표준세액공제 (7만원, 근로소득 없는 종합소득자, 소득세법 59조의4⑨2호나목)
 };
 
-// 연금소득세율 (국세) - 확정기간형, 수령 시점 나이
+// 연금소득세율 (국세) - 확정기간형, 수령 시점 나이 (rules: [나이 상한(미만), 세율] = [[70, 5%], [80, 4%], [∞, 3%]])
 function pensionRate(age) {
-  if (age >= 80) return 0.03;
-  if (age >= 70) return 0.04;
-  return 0.05;
+  const T = TTOKJAE_RULES.PENSION.rateByAgeNational;
+  for (let i = T.length - 1; i > 0; i--) if (age >= T[i - 1][0]) return T[i][1];   // 높은 구간부터: 80세 이상 → 70세 이상
+  return T[0][1];
 }
 
 // 이연퇴직소득 연금수령 시 퇴직소득세 납부 비율 (실제 수령연차)
 function retireFactor(n) {
-  if (n <= 10) return 0.7;
-  if (n <= 20) return 0.6;
-  return 0.5;
+  const T = TTOKJAE_RULES.RETIREMENT_INCOME_TAX.pensionPayRatio;   // [[10, 0.7], [20, 0.6], [∞, 0.5]]
+  for (let i = 0; i < T.length - 1; i++) if (n <= T[i][0]) return T[i][1];
+  return T[T.length - 1][1];
 }
 
 // 종합소득세 기본세율 (국세)
 function progressiveTax(base) {
   if (base <= 0) return 0;
-  const B = [
-    [14e6, 0.06, 0], [50e6, 0.15, 1.26e6], [88e6, 0.24, 5.76e6],
-    [150e6, 0.35, 15.44e6], [300e6, 0.38, 19.94e6], [500e6, 0.40, 25.94e6],
-    [1e9, 0.42, 35.94e6], [Infinity, 0.45, 65.94e6],
-  ];
+  const B = TTOKJAE_RULES.INCOME_TAX.brackets;   // [과세표준 상한, 세율, 누진공제]
   for (const [lim, r, d] of B) if (base <= lim) return base * r - d;
   return 0;
 }
 
 // 연금소득공제 (한도 900만원)
 function pensionDeduction(total) {
-  let d;
-  if (total <= 3.5e6) d = total;
-  else if (total <= 7e6) d = 3.5e6 + (total - 3.5e6) * 0.4;
-  else if (total <= 14e6) d = 4.9e6 + (total - 7e6) * 0.2;
-  else d = 6.3e6 + (total - 14e6) * 0.1;
-  return Math.min(d, 9e6);
+  const T = TTOKJAE_RULES.INCOME_TAX.pensionIncomeDeduction;   // [총연금액 상한, 공제율, 구간 시작, 누적공제]
+  let i = 0;
+  while (i < T.length - 1 && !(total <= T[i][0])) i++;
+  const d = T[i][3] + (total - T[i][2]) * T[i][1];
+  return Math.min(d, TTOKJAE_RULES.INCOME_TAX.pensionIncomeDeductionCap);
 }
 
 // 종합소득세 (지방세 포함) - 연금소득 + 기타 종합소득금액
@@ -1444,7 +1449,7 @@ function pensionDeduction(total) {
 function comprehensiveTax(publicPension, privatePension, otherIncome, age) {
   const total = publicPension + privatePension;
   const income = total - pensionDeduction(total) + otherIncome;
-  const ded = RULE.BASIC_DEDUCTION + (age >= 70 ? RULE.ELDER_DEDUCTION : 0);
+  const ded = RULE.BASIC_DEDUCTION + (age >= TTOKJAE_RULES.INCOME_TAX.elderAge ? RULE.ELDER_DEDUCTION : 0);
   const base = Math.max(0, income - ded);
   return Math.max(0, progressiveTax(base) - RULE.STD_CREDIT) * RULE.LOCAL;
 }
@@ -1452,18 +1457,16 @@ function comprehensiveTax(publicPension, privatePension, otherIncome, age) {
 // 퇴직소득세 (국세) 간이 계산 - 근속연수공제·환산급여공제 (2023년 이후)
 function retirementTax(severance, years) {
   years = Math.max(1, Math.ceil(years));
-  let sd;
-  if (years <= 5) sd = 1e6 * years;
-  else if (years <= 10) sd = 5e6 + 2e6 * (years - 5);
-  else if (years <= 20) sd = 15e6 + 2.5e6 * (years - 10);
-  else sd = 40e6 + 3e6 * (years - 20);
+  const RT = TTOKJAE_RULES.RETIREMENT_INCOME_TAX;
+  const SY = RT.serviceYearDeduction;   // [근속연수 상한, 1년당 공제, 구간 시작 연수, 누적공제]
+  let i = 0;
+  while (i < SY.length - 1 && !(years <= SY[i][0])) i++;
+  const sd = SY[i][3] + SY[i][1] * (years - SY[i][2]);
   const conv = Math.max(0, severance - sd) * 12 / years;
-  let cd;
-  if (conv <= 8e6) cd = conv;
-  else if (conv <= 70e6) cd = 8e6 + (conv - 8e6) * 0.6;
-  else if (conv <= 100e6) cd = 45.2e6 + (conv - 70e6) * 0.55;
-  else if (conv <= 300e6) cd = 61.7e6 + (conv - 100e6) * 0.45;
-  else cd = 151.7e6 + (conv - 300e6) * 0.35;
+  const CP = RT.convertedPayDeduction;  // [환산급여 상한, 공제율, 구간 시작 금액, 누적공제]
+  let j = 0;
+  while (j < CP.length - 1 && !(conv <= CP[j][0])) j++;
+  const cd = CP[j][3] + (conv - CP[j][2]) * CP[j][1];
   const base = Math.max(0, conv - cd);
   return Math.max(0, progressiveTax(base) * years / 12);
 }
@@ -1524,7 +1527,8 @@ function simulate(p) {
     return { rows, sum };
   }
 
-  const baseYear = p.pre2013 ? 6 : 1;
+  const PEN = TTOKJAE_RULES.PENSION;
+  const baseYear = p.pre2013 ? PEN.pre2013StartYear : 1;
   const plannedYears = p.mode === 'years' ? Math.max(1, Math.round(p.years)) : null;
   const fixedPay = p.mode === 'years' ? levelPayment(total0, r, plannedYears) : p.amount;
   const MAX_YEARS = 60;
@@ -1536,7 +1540,7 @@ function simulate(p) {
     const age = p.startAge + i;
     const n = i + 1;                                   // 실제 수령연차 (매년 인출 가정)
     const limitYear = baseYear + Math.max(0, age - p.eligAge); // 한도 계산용 연차
-    const limit = limitYear >= 11 ? Infinity : startBal / (11 - limitYear) * 1.2;
+    const limit = limitYear >= PEN.payoutLimitFreeYear ? Infinity : startBal / (PEN.payoutLimitFreeYear - limitYear) * PEN.payoutLimitFactor;
 
     if (p.mode === 'years' && i >= plannedYears) break;
     if (p.mode !== 'years' && age > MAX_AGE) break;     // 금액·맞춤 모드는 100세까지만
@@ -1600,13 +1604,13 @@ function simulate(p) {
         const low = p3 * pensionRate(age) * RULE.LOCAL;
         lowFlag = true;
         if (comp < low) { tPen = comp; method = '종합과세 선택'; sum.lowCompYears++; }
-        else { tPen = low; method = '저율 ' + (pensionRate(age) * 110).toFixed(1) + '%'; }
+        else { tPen = low; method = '저율 ' + (pensionRate(age) * RULE.LOCAL * 100).toFixed(1) + '%'; }
       } else {
         // 1,500만원 초과: 전액 종합과세 vs 16.5% 분리과세 중 선택 (소득세법 64조의4)
         const sep = p3 * RULE.SEP_RATE * RULE.LOCAL;
         highFlag = true;
         if (comp < sep) { tPen = comp; method = '종합과세 선택'; sum.compYears++; }
-        else { tPen = sep; method = '분리과세 16.5%'; sum.sepYears++; }
+        else { tPen = sep; method = '분리과세 ' + (+(PEN.separateRate * 100).toFixed(10)) + '%'; sum.sepYears++; }
       }
     }
     const tOth = out.b3 * RULE.OTHER_RATE * RULE.LOCAL;
@@ -1652,33 +1656,35 @@ function simulate(p) {
    재산 등급표: 국민건강보험법 시행령 별표 4 (2024-05-07 개정, 재산 기본공제 1억원)
    주택 재산세 과세표준: 공시가격 × 공정시장가액비율(1주택 특례 3억 이하 43%·6억 이하 44%·초과 45%, 2주택 이상 60%) */
 const NH = {
-  hi: 0.0719, ltc: 0.009448,             // 건강보험료율 · 장기요양보험료율(소득 대비)
-  floorIncomeM: 280000, floorPrem: 20160, // 지역 소득월액 하한 · 하한 보험료
-  capPremM: 4591740,                      // 소득 보험료 상한(월)
-  perPoint: 211.5, propDed: 1e8,          // 재산 부과점수당 금액 · 재산 기본공제
-  finMin: 10e6,                           // 이자·배당 1인 연 1,000만원 이하면 건보료 소득 제외(넘으면 전액)
-  pubRate: 0.5,                           // 지역가입자 공적연금 반영 비율
-  depIncome: 20e6, depBiz: 5e6, depProp1: 5.4e8, depProp2: 9e8, depPropIncome: 10e6,
+  hi: TTOKJAE_RULES.NHIS.healthRate, ltc: TTOKJAE_RULES.NHIS.ltcRate,          // 건강보험료율 · 장기요양보험료율(소득 대비)
+  floorIncomeM: TTOKJAE_RULES.NHIS.floorIncomeMonthly,                          // 지역 소득월액 하한
+  floorPrem: TTOKJAE_RULES.NHIS.premiumFloorMonthly,                            // 하한 보험료
+  capPremM: TTOKJAE_RULES.NHIS.premiumCapMonthly,                               // 소득 보험료 상한(월)
+  perPoint: TTOKJAE_RULES.NHIS.perPoint, propDed: TTOKJAE_RULES.NHIS.propertyDeduction,  // 재산 부과점수당 금액 · 재산 기본공제
+  finMin: TTOKJAE_RULES.NHIS.finIncomeThreshold,     // 이자·배당 1인 연 1,000만원 이하면 건보료 소득 제외(넘으면 전액)
+  pubRate: TTOKJAE_RULES.NHIS.publicPensionRatio,    // 지역가입자 공적연금 반영 비율
+  depIncome: TTOKJAE_RULES.NHIS.dependent.income, depBiz: TTOKJAE_RULES.NHIS.dependent.biz,
+  depProp1: TTOKJAE_RULES.NHIS.dependent.propLow, depProp2: TTOKJAE_RULES.NHIS.dependent.propHigh,
+  depPropIncome: TTOKJAE_RULES.NHIS.dependent.propIncome,
 };
-// [재산금액 상한(만원), 점수] 1~60등급
-const NH_PROP = [[450,22],[900,44],[1350,66],[1800,97],[2250,122],[2700,146],[3150,171],[3600,195],[4050,219],[4500,244],
-  [5020,268],[5590,294],[6220,320],[6930,344],[7710,365],[8590,386],[9570,412],[10700,439],[11900,465],[13300,490],
-  [14800,516],[16400,535],[18300,559],[20400,586],[22700,611],[25300,637],[28100,659],[31300,681],[34900,706],[38800,731],
-  [43200,757],[48100,785],[53600,812],[59700,841],[66500,881],[74000,921],[82400,961],[91800,1001],[103000,1041],[114000,1091],
-  [127000,1141],[142000,1191],[158000,1241],[176000,1291],[196000,1341],[218000,1391],[242000,1451],[270000,1511],[300000,1571],[330000,1641],
-  [363000,1711],[399300,1781],[439230,1851],[483153,1921],[531468,1991],[584615,2061],[643077,2131],[707385,2201],[778124,2271],[Infinity,2341]];
+// [재산금액 상한(만원), 점수] 1~60등급 (국민건강보험법 시행령 별표 4)
+const NH_PROP = TTOKJAE_RULES.NHIS.propertyPointTable;
 
 // 주택 재산세 과세표준 (gongsi: 공시가격 합계, multi: 2주택 이상)
 function houseTaxBase(gongsi, multi) {
   if (!(gongsi > 0)) return 0;
-  if (multi) return gongsi * 0.6;
-  return gongsi * (gongsi <= 3e8 ? 0.43 : gongsi <= 6e8 ? 0.44 : 0.45);
+  const PR = TTOKJAE_RULES.PROPERTY;
+  if (multi) return gongsi * PR.fairMarketRatioMultiHome;
+  const T = PR.fairMarketRatioSingleHome;   // [공시가격 상한, 비율] = [[3억, 43%], [6억, 44%], [∞, 45%]]
+  let i = 0;
+  while (i < T.length - 1 && !(gongsi <= T[i][0])) i++;
+  return gongsi * T[i][1];
 }
 function propPoints(taxBase) {
   const man = (taxBase - NH.propDed) / 1e4;
   if (man <= 0) return 0;
   for (const [lim, pt] of NH_PROP) if (man <= lim) return pt;
-  return 2341;
+  return NH_PROP[NH_PROP.length - 1][1];
 }
 // 건보료 소득에 잡히는 금융소득 (1인 기준)
 const nhFin = f => (f > NH.finMin ? f : 0);
@@ -1724,6 +1730,22 @@ if (typeof module !== 'undefined') module.exports = {
 };
 
 
+/* ===== 화면 문구·입력 제한에 쓰는 제도 숫자 (rules.js에서 만듦 — 글자는 예전 문구와 같게) ===== */
+const TR = TTOKJAE_RULES;
+const pctNum = r => +(r * 100).toFixed(10);                              // 비율 → % 숫자 (0.165 → 16.5)
+const comma3 = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');     // 1500 → '1,500'
+const MIN_AGE = TR.PENSION.minAge;                                       // 연금 개시 가능 나이 (55세)
+const SEP = TR.PENSION.separateLimit;                                    // 사적연금 저율 분리과세 기준 (연 1,500만원, 원)
+const T_SEP = comma3(SEP / 1e4);                                         // '1,500' (만원)
+const T_SEP2 = comma3(SEP * 2 / 1e4);                                    // '3,000' (부부 합계, 만원)
+const T_SEPR = pctNum(TR.PENSION.separateRate) + '%';                    // '16.5%' 1,500만원 초과 시 선택 분리과세
+const T_OTHR = pctNum(TR.PENSION.otherIncomeRate) + '%';                 // '16.5%' 연금외수령 기타소득세
+const RBA = TR.PENSION.rateByAge;                                        // [[70, 5.5%], [80, 4.4%], [∞, 3.3%]]
+const T_RATE = RBA.map(x => pctNum(x[1]) + '%');                         // ['5.5%', '4.4%', '3.3%']
+const T_LOW = pctNum(RBA[RBA.length - 1][1]) + '~' + T_RATE[0];          // '3.3~5.5%'
+const PPR = TR.RETIREMENT_INCOME_TAX.pensionPayRatio;                    // [[10, 0.7], [20, 0.6], [∞, 0.5]]
+const T_CUT = PPR.map(x => pctNum(1 - x[1]) + '%');                      // 퇴직소득세 감면율 ['30%', '40%', '50%']
+
 /* ===== UI ===== */
 const $ = (id) => document.getElementById(id);
 const state = { mode: 'years', retMode: 'calc', b1Mode: 'direct', b3Mode: 'direct', pubMode: 'direct', capStyle: 'split' };
@@ -1764,9 +1786,9 @@ function readParams() {
   let startAge = Math.round(num('start-age'));
   let eligAge = Math.round(num('elig-age'));
   const warn = [];
-  if (startAge < 55) { warn.push('연금은 55세부터 개시할 수 있어 55세로 계산했어요.'); startAge = 55; }
+  if (startAge < MIN_AGE) { warn.push(`연금은 ${MIN_AGE}세부터 개시할 수 있어 ${MIN_AGE}세로 계산했어요.`); startAge = MIN_AGE; }
   if (startAge > 90) startAge = 90;
-  if (eligAge < 55) eligAge = 55;
+  if (eligAge < MIN_AGE) eligAge = MIN_AGE;
   if (eligAge > startAge) { warn.push(`연금 받을 자격이 생긴 나이(${eligAge}세)가 개시 나이보다 늦어 ${eligAge}세 개시로 계산했어요.`); startAge = eligAge; }
   const b2 = num('b2');
   const b1 = state.b1Mode === 'doc' ? Math.max(0, num('b1-paid') - num('b1-ded')) : num('b1');
@@ -1786,7 +1808,7 @@ function readParams() {
     r: Math.max(-0.5, Math.min(0.3, num('rate') / 100)),
     mode: (state.mode === 'cap' && state.capStyle === 'split') ? 'split' : state.mode, years, amount: Math.max(100000, num('amount')),
     desired: Math.max(100000, num('phase1')),
-    phase1Amount: Math.max(0, num('phase1')), capAmount: Math.min(15000000, Math.max(0, num('capamt'))),
+    phase1Amount: Math.max(0, num('phase1')), capAmount: Math.min(SEP, Math.max(0, num('capamt'))),
     publicPension: Math.max(0, pubAnnual), publicStartAge: Math.round(num('pub-start')) || 65, otherIncome: Math.max(0, num('other')),
     _warn: warn,
   };
@@ -1798,15 +1820,15 @@ function updateHints(p) {
   $('b3-hint').innerHTML = state.b3Mode === 'total'
     ? (p._b3neg ? '<b>총평가액이 1·2 바구니 합계보다 작아요.</b> 숫자를 다시 확인해 주세요.' : `총평가액 − 1 − 2 = <b>${fmtMan(p.b3)}</b>`)
     : fmtMan(p.b3);
-  const rr = p.b2 > 0 ? p.retTaxNat * 1.1 / p.b2 : 0;
+  const rr = p.b2 > 0 ? p.retTaxNat * RULE.LOCAL / p.b2 : 0;
   $('ret-hint').innerHTML = p.b2 > 0
-    ? `퇴직소득세 <b>${fmtMan(p.retTaxNat * 1.1)}</b> (지방세 포함) · 퇴직소득세율 <b>${pct(rr)}</b>`
+    ? `퇴직소득세 <b>${fmtMan(p.retTaxNat * RULE.LOCAL)}</b> (지방세 포함) · 퇴직소득세율 <b>${pct(rr)}</b>`
     : '퇴직금이 없으면 0으로 두세요';
   const total = p.b1 + p.b2 + p.b3;
   $('years-hint').innerHTML = `매년 약 <b>${fmtMan(levelPayment(total, p.r, p.years))}</b> (세전) 인출`;
   $('amount-hint').innerHTML = `월 <b>${fmtMan(p.amount / 12)}</b> (세전)`;
-  $('cap-hint').innerHTML = num('capamt') > 15000000
-    ? '<b>3 바구니 구간은 1,500만원까지만</b> 넣을 수 있어 1,500만원으로 계산했어요.'
+  $('cap-hint').innerHTML = num('capamt') > SEP
+    ? `<b>3 바구니 구간은 ${T_SEP}만원까지만</b> 넣을 수 있어 ${T_SEP}만원으로 계산했어요.`
     : (state.capStyle === 'split'
         ? `매년 3에서 <b>${fmtMan(Math.min(p.capAmount, p.desired))}</b> + 1·2에서 <b>${fmtMan(Math.max(0, p.desired - p.capAmount))}</b> 보충 (월 ${fmtMan(p.desired / 12)})`
         : `처음엔 월 <b>${fmtMan(p.phase1Amount / 12)}</b>, 3 바구니 구간은 월 <b>${fmtMan(p.capAmount / 12)}</b> (세전)`);
@@ -1830,8 +1852,8 @@ function strategies(p) {
   ];
   const W = (p.mode === 'cap' || p.mode === 'split') ? p.phase1Amount : Math.round(firstW / 10000) * 10000;
   if (p.mode === 'cap' || p.mode === 'split') list.push({ key: 'same', name: '같은 금액 계속 받기', p: { ...p, mode: 'amount', amount: Math.max(100000, W) } });
-  if (p.mode !== 'cap') list.push({ key: 'cap', name: '1,500만원 맞춤', p: { ...p, mode: 'cap', phase1Amount: W, capAmount: 15000000 } });
-  if (p.mode !== 'split') list.push({ key: 'split', name: '계좌 나누기', p: { ...p, mode: 'split', desired: W, capAmount: 15000000 } });
+  if (p.mode !== 'cap') list.push({ key: 'cap', name: `${T_SEP}만원 맞춤`, p: { ...p, mode: 'cap', phase1Amount: W, capAmount: SEP } });
+  if (p.mode !== 'split') list.push({ key: 'split', name: '계좌 나누기', p: { ...p, mode: 'split', desired: W, capAmount: SEP } });
   const mine = { key: 'mine', name: '내 계획', p: { ...p }, mine: true, res: mineRes };
   list.push(mine);
   list.forEach(s => { if (!s.res) s.res = simulate(s.p); });
@@ -1849,7 +1871,7 @@ function render() {
   const lastAge = rows.length ? rows[rows.length - 1].age : p.startAge;
 
   $('plan-desc').textContent = total0 > 0
-    ? `총 ${fmtMan(total0)}을 ${p.startAge}세부터 ${rows.length}년간(${p.startAge}~${lastAge}세) 받는 경우` + (S.leftover > 10000 ? ` · 100세에 ${fmtMan(S.leftover)}이 남아요` : '') + (p.mode === 'split' ? ' · 계좌 나누기(3은 연 1,500만원까지, 부족분은 1·2에서)' : '')
+    ? `총 ${fmtMan(total0)}을 ${p.startAge}세부터 ${rows.length}년간(${p.startAge}~${lastAge}세) 받는 경우` + (S.leftover > 10000 ? ` · 100세에 ${fmtMan(S.leftover)}이 남아요` : '') + (p.mode === 'split' ? ` · 계좌 나누기(3은 연 ${T_SEP}만원까지, 부족분은 1·2에서)` : '')
     : '금액을 입력해 주세요.';
 
   // 카드
@@ -1860,13 +1882,13 @@ function render() {
   $('s-net').textContent = fmtShort(S.net) + '원';
   $('s-net-sub').textContent = `넣어 둔 ${fmtShort(total0)}원 + 운용수익 − 세금`;
   $('s-lump').textContent = fmtShort(lump.res.sum.tax) + '원';
-  $('s-lump-sub').textContent = `연금 개시 없이 전액 연금외수령 · 실효세율 ${pct(lump.res.sum.effRate)} (퇴직소득세 100% + 기타소득세 16.5%)`;
+  $('s-lump-sub').textContent = `연금 개시 없이 전액 연금외수령 · 실효세율 ${pct(lump.res.sum.effRate)} (퇴직소득세 100% + 기타소득세 ${T_OTHR})`;
 
   // 세금 지도
   const tm = [
     { c: 'var(--b2)', t: '<span class="bn n2">2</span> 퇴직소득세 (감면 후)', v: S.taxRetire, s: `퇴직금 ${fmtShort(S.from2)} 인출분` },
-    { c: 'var(--green)', t: '<span class="bn n3">3</span> 1,500만원 이하인 해', v: S.taxPensionLow, s: S.lowYears ? `${S.lowYears}년 · 저율 ${S.lowYears - S.lowCompYears}년${S.lowCompYears ? '·종합과세 ' + S.lowCompYears + '년' : ''}` : '해당 없음' },
-    { c: 'var(--accent)', t: '<span class="bn n3">3</span> 1,500만원 초과분', v: S.taxPensionHigh, s: S.highYears ? `${S.highYears}년 · 유리한 쪽 자동 선택` : '해당 없음' },
+    { c: 'var(--green)', t: `<span class="bn n3">3</span> ${T_SEP}만원 이하인 해`, v: S.taxPensionLow, s: S.lowYears ? `${S.lowYears}년 · 저율 ${S.lowYears - S.lowCompYears}년${S.lowCompYears ? '·종합과세 ' + S.lowCompYears + '년' : ''}` : '해당 없음' },
+    { c: 'var(--accent)', t: `<span class="bn n3">3</span> ${T_SEP}만원 초과분`, v: S.taxPensionHigh, s: S.highYears ? `${S.highYears}년 · 유리한 쪽 자동 선택` : '해당 없음' },
     { c: '#7A2E14', t: '한도 초과 (연금외수령)', v: S.taxOther + 0, s: S.overYears ? `${S.overYears}년 · ${fmtShort(S.overAmount)} 초과` : '해당 없음' },
   ];
   $('taxmap').innerHTML = tm.map(x => `<div class="taxmap-item"><div class="t"><i style="background:${x.c}"></i>${x.t}</div><div class="v">${fmtT(x.v) === '-' ? '0' : fmtT(x.v)}원</div><div class="s">${x.s}</div></div>`).join('');
@@ -1879,7 +1901,7 @@ function render() {
     const firstOver = rows.find(r => r.over > 0.5);
     const ov = [];
     if (S.over2 > 0.5) ov.push(`<span class="bn n2">2</span> 퇴직금 ${fmtShort(S.over2)}원은 퇴직소득세 100%(감면 없음)`);
-    if (S.over3 > 0.5) ov.push(`<span class="bn n3">3</span> ${fmtShort(S.over3)}원은 기타소득세 16.5%`);
+    if (S.over3 > 0.5) ov.push(`<span class="bn n3">3</span> ${fmtShort(S.over3)}원은 기타소득세 ${T_OTHR}`);
     al.push(['warn', `<b>${firstOver.age}세${S.overYears > 1 ? `부터 ${S.overYears}년간` : '에'} 수령한도를 넘었어요.</b> 넘은 ${fmtShort(S.overAmount)}원은 연금외수령이라 연금 세제 혜택 없이 과세됩니다${ov.length ? ' — ' + ov.join(', ') : ''}. 받는 기간을 늘리거나 첫해 금액을 줄여 보세요.`]);
   } else al.push(['ok', '<b>모든 해에 수령한도 안에서 받습니다.</b> 연금 세제 혜택을 그대로 누려요.']);
   // 계좌가 바닥나는 나이 (마지막 해 뒤 남은 돈이 없을 때) — 맨 위에 보여 준다
@@ -1895,28 +1917,28 @@ function render() {
   }
   if (S.highYears) {
     const fh = rows.find(r => r.p3 > RULE.SEP_LIMIT);
-    al.push(['warn', `<b>${fh.age}세부터 ${S.highYears}년간 <span class="bn n3">3</span>에서 받는 돈이 1,500만원을 넘어요.</b> 이 해에는 전액이 종합과세 또는 16.5% 분리과세 대상이며, 계산기가 둘 중 세금이 적은 쪽(종합과세 ${S.compYears}년·분리과세 ${S.sepYears}년)을 골랐습니다.${S.compYears ? ' 종합과세를 고르면 다음 해 5월에 종합소득세 신고를 해야 해요.' : ''}`]);
+    al.push(['warn', `<b>${fh.age}세부터 ${S.highYears}년간 <span class="bn n3">3</span>에서 받는 돈이 ${T_SEP}만원을 넘어요.</b> 이 해에는 전액이 종합과세 또는 ${T_SEPR} 분리과세 대상이며, 계산기가 둘 중 세금이 적은 쪽(종합과세 ${S.compYears}년·분리과세 ${S.sepYears}년)을 골랐습니다.${S.compYears ? ' 종합과세를 고르면 다음 해 5월에 종합소득세 신고를 해야 해요.' : ''}`]);
   } else if (S.pen3 > 0.5) {
     const how = S.lowCompYears
-      ? `저율 분리과세(3.3~5.5%)와 종합과세 중 세금이 적은 쪽으로 끝납니다(종합과세가 유리한 해 ${S.lowCompYears}년 — 다음 해 5월 종합소득세 신고 필요).`
-      : '3.3~5.5% 저율 분리과세로 끝납니다.';
-    const tail = S.over3 > 0.5 ? ` 다만 수령한도를 넘겨 꺼낸 <span class="bn n3">3</span> ${fmtShort(S.over3)}원은 연금이 아니라 <b>기타소득세 16.5%</b>가 붙어요.` : '';
-    al.push([S.over3 > 0.5 ? 'warn' : 'ok', `<b><span class="bn n3">3</span>에서 연금으로 받는 돈이 매년 1,500만원 이하</b>라 ${how}${tail}`]);
-  } else if (S.over3 > 0.5) al.push(['warn', `<b><span class="bn n3">3</span> ${fmtShort(S.over3)}원을 모두 수령한도 밖에서 꺼내</b> 저율 연금소득세가 아니라 기타소득세 16.5%가 붙어요.`]);
+      ? `저율 분리과세(${T_LOW})와 종합과세 중 세금이 적은 쪽으로 끝납니다(종합과세가 유리한 해 ${S.lowCompYears}년 — 다음 해 5월 종합소득세 신고 필요).`
+      : `${T_LOW} 저율 분리과세로 끝납니다.`;
+    const tail = S.over3 > 0.5 ? ` 다만 수령한도를 넘겨 꺼낸 <span class="bn n3">3</span> ${fmtShort(S.over3)}원은 연금이 아니라 <b>기타소득세 ${T_OTHR}</b>가 붙어요.` : '';
+    al.push([S.over3 > 0.5 ? 'warn' : 'ok', `<b><span class="bn n3">3</span>에서 연금으로 받는 돈이 매년 ${T_SEP}만원 이하</b>라 ${how}${tail}`]);
+  } else if (S.over3 > 0.5) al.push(['warn', `<b><span class="bn n3">3</span> ${fmtShort(S.over3)}원을 모두 수령한도 밖에서 꺼내</b> 저율 연금소득세가 아니라 기타소득세 ${T_OTHR}가 붙어요.`]);
   if (p.b2 > 0) {
     // 감면은 한도 안에서 연금으로 받은 퇴직금(pen2)에만 적용. 한도 초과분(over2)은 감면 0%
     const n = rows.filter(r => r.pen2 > 0.5).map(r => r.n);
     const lastN = n.length ? Math.max(...n) : 0;
     const overTxt = S.over2 > 0.5 ? ` 단, 수령한도를 넘겨 꺼낸 퇴직금 <b>${fmtShort(S.over2)}원은 감면 없이</b> 퇴직소득세 100%를 냅니다.` : '';
-    if (lastN && lastN <= 10) al.push(['info', `한도 안에서 연금으로 받는 퇴직금은 ${lastN}년차 안에 모두 받아 <b>30% 감면</b>만 적용돼요. 11년차 이후로 일부를 넘기면 40%, 21년차 이후는 50% 감면입니다.${overTxt}`]);
-    else if (lastN > 10) al.push(['info', `퇴직금 연금수령이 ${lastN}년차까지 이어져 <b>${lastN > 20 ? '최대 50%' : '40%'} 감면 구간</b>까지 활용합니다.${overTxt}`]);
+    if (lastN && lastN <= PPR[0][0]) al.push(['info', `한도 안에서 연금으로 받는 퇴직금은 ${lastN}년차 안에 모두 받아 <b>${T_CUT[0]} 감면</b>만 적용돼요. ${PPR[0][0] + 1}년차 이후로 일부를 넘기면 ${T_CUT[1]}, ${PPR[1][0] + 1}년차 이후는 ${T_CUT[2]} 감면입니다.${overTxt}`]);
+    else if (lastN > PPR[0][0]) al.push(['info', `퇴직금 연금수령이 ${lastN}년차까지 이어져 <b>${lastN > PPR[1][0] ? '최대 ' + T_CUT[2] : T_CUT[1]} 감면 구간</b>까지 활용합니다.${overTxt}`]);
     else if (S.over2 > 0.5) al.push(['warn', `퇴직금 <b>${fmtShort(S.over2)}원을 모두 수령한도 밖에서</b> 꺼내 감면 없이 퇴직소득세 100%를 냅니다.`]);
   }
-  if (rows.length && rows[0].age >= 70 && S.pen3 > 0.5) {
+  if (rows.length && rows[0].age >= RBA[0][0] && S.pen3 > 0.5) {
     const a = rows[0].age;
-    al.push(['info', a >= 80
-      ? '80세 이후 개시라 <span class="bn n3">3</span> 저율 연금소득세가 처음부터 가장 낮은 <b>3.3%</b>입니다.'
-      : `70세 이후 개시라 <span class="bn n3">3</span> 저율 연금소득세가 <b>4.4%</b>부터 시작해 80세부터 3.3%로 내려갑니다.`]);
+    al.push(['info', a >= RBA[1][0]
+      ? `${RBA[1][0]}세 이후 개시라 <span class="bn n3">3</span> 저율 연금소득세가 처음부터 가장 낮은 <b>${T_RATE[2]}</b>입니다.`
+      : `${RBA[0][0]}세 이후 개시라 <span class="bn n3">3</span> 저율 연금소득세가 <b>${T_RATE[1]}</b>부터 시작해 ${RBA[1][0]}세부터 ${T_RATE[2]}로 내려갑니다.`]);
   }
   $('alerts').innerHTML = al.map(([k, h]) => `<div class="alert ${k}"><span class="ic">${k === 'ok' ? '✓' : k === 'warn' ? '!' : 'i'}</span><div>${h}</div></div>`).join('');
   }
@@ -1936,7 +1958,7 @@ function render() {
   // 연도별 표
   $('yr-table').querySelector('tbody').innerHTML = rows.map(r => {
     const m = r.method === '-' ? '-' : `<span class="pill ${r.p3 > RULE.SEP_LIMIT ? 'high' : 'low'}">${r.method}</span>`;
-    const hl = (r.n === 11 || r.n === 21) && r.from2 > 0 ? 'hl-year' : '';
+    const hl = (r.n === PPR[0][0] + 1 || r.n === PPR[1][0] + 1) && r.from2 > 0 ? 'hl-year' : '';   // 퇴직소득세 감면율이 바뀌는 해 (11·21년차)
     return `<tr class="${hl}"><td>${r.n}년차</td><td>${r.age}세</td><td>${fmtT(r.startBal)}</td><td>${r.limit === Infinity ? '제한 없음' : fmtT(r.limit)}</td><td><b>${fmtT(r.w)}</b></td>
       <td class="c1">${fmtT(r.from1)}</td><td class="c2">${fmtT(r.from2)}</td><td class="c3">${fmtT(r.from3)}</td><td class="${r.over > 0.5 ? 'over' : ''}">${fmtT(r.over)}</td>
       <td>${fmtT(r.taxRetire)}</td><td>${fmtT(r.taxPension)}</td><td>${fmtT(r.taxOther)}</td><td class="tax">${fmtT(r.tax)}</td><td class="method">${m}</td><td><b>${fmtT(r.net)}</b></td></tr>`;
@@ -1958,7 +1980,7 @@ function renderCouple(p) {
   const sb1 = Math.max(0, num('sp-b1')), sb2 = Math.max(0, num('sp-b2')), sb3 = Math.max(0, num('sp-b3'));
   const sYears = Math.max(1, num('sp-ret-years'));
   const sRet = sb2 > 0 ? retirementTax(sb2, sYears) : 0;
-  $('sp-b2-hint').innerHTML = sb2 > 0 ? `퇴직소득세 <b>${fmtMan(sRet * 1.1)}</b> (지방세 포함) · 세율 ${pct(sRet * 1.1 / sb2)}` : '근속연수로 퇴직소득세를 계산해요';
+  $('sp-b2-hint').innerHTML = sb2 > 0 ? `퇴직소득세 <b>${fmtMan(sRet * RULE.LOCAL)}</b> (지방세 포함) · 세율 ${pct(sRet * RULE.LOCAL / sb2)}` : '근속연수로 퇴직소득세를 계산해요';
   const diff = Math.round(num('sp-diff')) || 0;
   const W = Math.max(100000, num('cp-want'));
   const totMe = p.b1 + p.b2 + p.b3, totSp = sb1 + sb2 + sb3, tot = totMe + totSp;
@@ -1970,9 +1992,9 @@ function renderCouple(p) {
     return;
   }
   const spAge0 = p.startAge - diff;                 // 본인이 개시하는 해의 배우자 나이
-  const spStart = Math.max(55, spAge0);
+  const spStart = Math.max(MIN_AGE, spAge0);
   const wMe = W * totMe / tot, wSp = W * totSp / tot;
-  const base = { r: p.r, mode: 'split', capAmount: 15000000, otherIncome: p.otherIncome, pre2013: false };
+  const base = { r: p.r, mode: 'split', capAmount: SEP, otherIncome: p.otherIncome, pre2013: false };
   const me = simulate({ ...p, ...base, desired: Math.max(100000, wMe) });
   // 배우자가 55세가 될 때까지 기다리는 동안에도 계좌는 굴러간다: 수익은 ③으로, 손실은 ③→②→① 순으로 차감 (시행령 제40조의3 제5항)
   let wb1 = sb1, wb2 = sb2, wb3 = sb3;
@@ -1992,15 +2014,15 @@ function renderCouple(p) {
   each.eff = each.w > 0 ? each.tax / each.w : 0;
   const o = { tax: one.sum.tax, w: one.sum.withdrawn, high: one.sum.highYears, keep: keepYears(one.rows, W), eff: one.sum.effRate };
   $('cp-want-hint').innerHTML = `월 ${fmtMan(W / 12)} · 본인 ${fmtMan(wMe)} + 배우자 ${fmtMan(wSp)} (계좌 잔액 비율)`;
-  $('cp-formula').innerHTML = `<div>본인 <b>${fmtMan(totMe)}</b> · 배우자 <b>${fmtMan(totSp)}</b><br>각자 <span class="bn n3">3</span>에서 연 1,500만원까지 → 부부 합쳐 <b>연 3,000만원</b>까지 저율 3.3~5.5%</div>`;
+  $('cp-formula').innerHTML = `<div>본인 <b>${fmtMan(totMe)}</b> · 배우자 <b>${fmtMan(totSp)}</b><br>각자 <span class="bn n3">3</span>에서 연 ${T_SEP}만원까지 → 부부 합쳐 <b>연 ${T_SEP2}만원</b>까지 저율 ${T_LOW}</div>`;
   const row = (nm, x, best) => `<tr class="${best ? 'mine' : ''}"><td>${nm}${best ? '<span class="best-badge">세금 적음</span>' : ''}</td><td>${x.keep}년</td><td class="${x.high ? 'warn' : ''}">${x.high ? x.high + '년' : '없음'}</td><td>${fmtT(x.tax)}</td><td>${pct(x.eff)}</td></tr>`;
   const eachBetter = each.eff <= o.eff + 1e-9;
   tb.innerHTML = row('부부가 각자 (지금 입력한 대로)', each, eachBetter) + row('한 사람 계좌에 다 있었다면', o, !eachBetter);
   const al = [];
   const dEff = o.eff - each.eff;
-  if (dEff > 0.0005) al.push(['ok', `<b>부부가 나눠 갖고 있어서 실효세율이 ${pct(o.eff)} → ${pct(each.eff)}로 낮아져요.</b> ${each.keep > o.keep ? `원하는 금액도 ${o.keep}년 → <b>${each.keep}년</b> 동안 이어져요(각자 <span class="bn n3">3</span>에서 1,500만원씩 꺼낼 수 있어서). ` : ''}${o.high ? `한 사람 계좌였다면 <span class="bn n3">3</span>에서 받는 돈이 ${o.high}년 동안 1,500만원을 넘었을 거예요.` : ''}`]);
-  else al.push(['info', `<b>이 금액에서는 나눠 가져도 세금 차이가 거의 없어요.</b> 한 사람 계좌만으로도 <span class="bn n3">3</span>에서 받는 돈이 1,500만원 안에 들어오기 때문이에요. 원하는 금액을 늘리면 차이가 생겨요.`]);
-  if (spAge0 < 55) al.push(['warn', `본인이 ${p.startAge}세에 개시할 때 배우자는 ${spAge0}세라 아직 연금을 받을 수 없어요. 배우자 계좌는 <b>55세(${55 - spAge0}년 뒤)</b>부터 받는 것으로, 기다리는 동안 수익률 ${pct(p.r)}로 굴러간 금액(<b>${fmtMan(wb1 + wb2 + wb3)}</b>)으로 계산했어요.`]);
+  if (dEff > 0.0005) al.push(['ok', `<b>부부가 나눠 갖고 있어서 실효세율이 ${pct(o.eff)} → ${pct(each.eff)}로 낮아져요.</b> ${each.keep > o.keep ? `원하는 금액도 ${o.keep}년 → <b>${each.keep}년</b> 동안 이어져요(각자 <span class="bn n3">3</span>에서 ${T_SEP}만원씩 꺼낼 수 있어서). ` : ''}${o.high ? `한 사람 계좌였다면 <span class="bn n3">3</span>에서 받는 돈이 ${o.high}년 동안 ${T_SEP}만원을 넘었을 거예요.` : ''}`]);
+  else al.push(['info', `<b>이 금액에서는 나눠 가져도 세금 차이가 거의 없어요.</b> 한 사람 계좌만으로도 <span class="bn n3">3</span>에서 받는 돈이 ${T_SEP}만원 안에 들어오기 때문이에요. 원하는 금액을 늘리면 차이가 생겨요.`]);
+  if (spAge0 < MIN_AGE) al.push(['warn', `본인이 ${p.startAge}세에 개시할 때 배우자는 ${spAge0}세라 아직 연금을 받을 수 없어요. 배우자 계좌는 <b>${MIN_AGE}세(${MIN_AGE - spAge0}년 뒤)</b>부터 받는 것으로, 기다리는 동안 수익률 ${pct(p.r)}로 굴러간 금액(<b>${fmtMan(wb1 + wb2 + wb3)}</b>)으로 계산했어요.`]);
   $('cp-alerts').innerHTML = al.map(([k, h]) => `<div class="alert ${k}"><span class="ic">${k === 'ok' ? '✓' : k === 'warn' ? '!' : 'i'}</span><div>${h}</div></div>`).join('');
 }
 
@@ -2023,13 +2045,13 @@ function renderNh(p, mine) {
   const won = v => Math.round(v).toLocaleString() + '원';
   let h = `<div class="nh-box dark"><div class="nh-k">지역가입자라면 (부부 한 세대)</div><div class="nh-v">월 ${won(R.total)}</div>
     <ul><li>소득 보험료 ${won(R.incPrem)}${R.floor ? ' (하한 보험료)' : ` — 반영 소득 연 ${fmtMan(R.income)}`}</li>
-    <li>재산 보험료 ${won(R.propPrem)} — 과세표준 ${fmtMan(tbase)}${R.pts ? `, ${R.pts}점` : ' (1억원 공제 후 0)'}</li>
+    <li>재산 보험료 ${won(R.propPrem)} — 과세표준 ${fmtMan(tbase)}${R.pts ? `, ${R.pts}점` : ` (${NH.propDed / 1e8}억원 공제 후 0)`}</li>
     <li>장기요양보험료 ${won(R.ltc)}</li></ul></div>`;
   // 비교: 연금계좌에서 꺼낸 첫해 금액이 일반계좌 배당이었다면
   const w0 = mine.res.rows.length ? mine.res.rows[0].w : 0;
   const R2 = nhRegional({ pub: [pubMe, pubSp], fin: [finMe + w0, finSp], other, taxBase: tbase });
   h += `<div class="nh-box"><div class="nh-k">연금계좌에서 꺼낸 돈의 건보료</div><div class="nh-v">0원</div>
-    <div class="nh-s">내 계획 첫해 인출액 <b>${fmtMan(w0)}</b>은 건보료에 잡히지 않아요. 같은 금액을 <b>일반계좌 이자·배당</b>으로 받았다면 건보료가 <b>월 ${won(Math.max(0, R2.total - R.total))}</b> 더 나왔을 거예요${finMe + w0 > 2e7 ? ' (금융소득종합과세 대상이 되는 세금은 별도)' : ''}.</div></div>`;
+    <div class="nh-s">내 계획 첫해 인출액 <b>${fmtMan(w0)}</b>은 건보료에 잡히지 않아요. 같은 금액을 <b>일반계좌 이자·배당</b>으로 받았다면 건보료가 <b>월 ${won(Math.max(0, R2.total - R.total))}</b> 더 나왔을 거예요${finMe + w0 > TR.FIN_INCOME.threshold ? ' (금융소득종합과세 대상이 되는 세금은 별도)' : ''}.</div></div>`;
   if ($('nh-dep').checked) {
     const spBizReg = $('nh-sp-bizreg').checked;
     const hasSp = pubSp + finSp + otherSp > 0 || spShare > 0 || spBizReg || num('sp-b3') > 0;
@@ -2038,19 +2060,19 @@ function renderNh(p, mine) {
     const me = D.people[0], sp = D.people[1];
     const li = [];
     const incTxt = x => x.inc <= NH.depIncome ? '→ 통과' : '→ <b>탈락</b>';
-    li.push(`본인 소득 ${fmtMan(me.inc)} ${incTxt(me)}${sp ? ` · 배우자 ${fmtMan(sp.inc)} ${incTxt(sp)}` : ''} (각자 2,000만원 이하)${D.incAll ? '' : ' → 소득·사업소득 요건은 한 명만 걸려도 <b>부부 둘 다 탈락</b>'}`);
+    li.push(`본인 소득 ${fmtMan(me.inc)} ${incTxt(me)}${sp ? ` · 배우자 ${fmtMan(sp.inc)} ${incTxt(sp)}` : ''} (각자 ${comma3(NH.depIncome / 1e4)}만원 이하)${D.incAll ? '' : ' → 소득·사업소득 요건은 한 명만 걸려도 <b>부부 둘 다 탈락</b>'}`);
     const bizLine = (who, x) => x.bizReg
       ? `${who} 사업자등록 또는 주택임대 있음 — 임대·사업소득 ${fmtMan(x.biz)} ${x.bizOk ? '(0원이라 통과)' : '→ 1원이라도 있으면 <b>탈락</b>'}`
-      : `${who} 사업자등록·주택임대 없음 — 임대·사업소득 ${fmtMan(x.biz)} ${x.bizOk ? '≤ 500만원 → 통과' : '> 500만원 → <b>탈락</b>'}`;
+      : `${who} 사업자등록·주택임대 없음 — 임대·사업소득 ${fmtMan(x.biz)} ${x.bizOk ? `≤ ${comma3(NH.depBiz / 1e4)}만원 → 통과` : `> ${comma3(NH.depBiz / 1e4)}만원 → <b>탈락</b>`}`;
     if (me.biz > 0 || me.bizReg) li.push(bizLine('본인', me));
     if (sp && (sp.biz > 0 || sp.bizReg)) li.push(bizLine('배우자', sp));
-    const propLine = (who, x) => `${who} 집 과세표준 ${fmtMan(x.tb)} ${x.tb <= NH.depProp1 ? '≤ 5.4억원 → 통과' : x.tb <= NH.depProp2 ? `(5.4억~9억) → 소득 ${x.inc <= NH.depPropIncome ? '1,000만원 이하라 통과' : '1,000만원 초과라 탈락'}` : '> 9억원 → 탈락'}`;
+    const propLine = (who, x) => `${who} 집 과세표준 ${fmtMan(x.tb)} ${x.tb <= NH.depProp1 ? `≤ ${NH.depProp1 / 1e8}억원 → 통과` : x.tb <= NH.depProp2 ? `(${NH.depProp1 / 1e8}억~${NH.depProp2 / 1e8}억) → 소득 ${x.inc <= NH.depPropIncome ? `${comma3(NH.depPropIncome / 1e4)}만원 이하라 통과` : `${comma3(NH.depPropIncome / 1e4)}만원 초과라 탈락`}` : `> ${NH.depProp2 / 1e8}억원 → 탈락`}`;
     li.push(propLine(sp && spShare > 0 ? '본인 지분' : '본인', me) + (sp && spShare > 0 ? ' · ' + propLine('배우자 지분', sp).replace(/^배우자 지분 집 /, '배우자 지분 ') : '') + (sp ? ' (재산 요건은 각자 따로)' : ''));
     h += `<div class="nh-box wide"><div class="nh-k">피부양자로 올라갈 수 있나요?<span class="nh-tag ${D.ok ? 'ok' : 'no'}">${D.ok ? '부부 모두 가능' : (D.people.some(x => x.ok) ? '일부만 가능' : '탈락 → 지역가입자')}</span></div>
       <ul style="margin-top:6px;">${li.map(x => `<li>${x}</li>`).join('')}</ul>
       <div class="nh-s" style="margin-top:6px;">피부양자는 보험료가 0원이에요. 부양 관계·소득 종류별 세부 요건이 더 있으니, 정확한 판정은 국민건강보험공단(1577-1000)에서 확인하세요.</div></div>`;
   }
-  h += `<div class="nh-box wide" style="background:transparent; padding:4px 2px;"><div class="nh-s" style="color:var(--ink-mute); font-size:12.5px;">2026년 기준 추정입니다: 건강보험료율 7.19%, 장기요양 0.9448%(소득 대비), 지역가입자 공적연금 50% 반영, 이자·배당은 1인 연 1,000만원 넘으면 전액, 재산은 주택 과세표준에서 1억원 공제 후 등급 점수 × 211.5원. 전월세 보증금·토지·세대원 근로소득은 넣지 않았고, 실제 보험료는 전년도 소득 자료로 매겨져요.</div></div>`;
+  h += `<div class="nh-box wide" style="background:transparent; padding:4px 2px;"><div class="nh-s" style="color:var(--ink-mute); font-size:12.5px;">2026년 기준 추정입니다: 건강보험료율 ${pctNum(NH.hi)}%, 장기요양 ${pctNum(NH.ltc)}%(소득 대비), 지역가입자 공적연금 ${pctNum(NH.pubRate)}% 반영, 이자·배당은 1인 연 ${comma3(NH.finMin / 1e4)}만원 넘으면 전액, 재산은 주택 과세표준에서 ${NH.propDed / 1e8}억원 공제 후 등급 점수 × ${NH.perPoint}원. 전월세 보증금·토지·세대원 근로소득은 넣지 않았고, 실제 보험료는 전년도 소득 자료로 매겨져요.</div></div>`;
   $('nh-out').innerHTML = h;
 }
 
@@ -2094,7 +2116,7 @@ function buildCopyText(c) {
   const how = p.mode === 'years' ? `${rows.length}년 나눠 받기`
     : p.mode === 'amount' ? `매년 ${fmtMan(p.amount)}씩 받기`
     : p.mode === 'split' ? `계좌 나누기(매년 ${fmtMan(p.desired)})`
-    : '1,500만원 맞춤(순서대로 받기)';
+    : `${T_SEP}만원 맞춤(순서대로 받기)`;
   const L = [];
   L.push('[연금 인출 세금 계산 결과]');
   L.push(`연금계좌 총 ${fmtMan(total0)} · ${p.startAge}세 개시 · ${rows.length}년간(${p.startAge}~${lastAge}세) 받기 · ${how}`);
@@ -2105,8 +2127,8 @@ function buildCopyText(c) {
     : `계좌가 바닥나는 나이: 만 ${lastAge}세 (${lastAge + 1}세부터 이 계좌에서 받을 돈 없음)`);
   const hi = rows.filter(r => r.p3 > RULE.SEP_LIMIT);
   L.push(hi.length
-    ? `세액공제 받은 원금·수익에서 연 1,500만원 초과: ${hi.length}년 (${hi[0].age}세부터)`
-    : '세액공제 받은 원금·수익에서 연 1,500만원 초과: 없음');
+    ? `세액공제 받은 원금·수익에서 연 ${T_SEP}만원 초과: ${hi.length}년 (${hi[0].age}세부터)`
+    : `세액공제 받은 원금·수익에서 연 ${T_SEP}만원 초과: 없음`);
   L.push(url);
   return L.join('\n');
 }
@@ -2146,7 +2168,7 @@ function renderCap(p, list, mine) {
   const capS = isCap ? mine : list.find(s => s.key === 'cap');
   const other = isCap ? list.find(s => s.key === 'same') : mine;
   const capR = capS.res, othR = other.res;
-  const CAP = isCap ? p.capAmount : 15000000;
+  const CAP = isCap ? p.capAmount : SEP;
 
   // 1,500 초과로 더 낸 세금 (비교 대상 기준)
   let extra = 0;
@@ -2155,14 +2177,14 @@ function renderCap(p, list, mine) {
   const box = (k, h) => `<div class="alert ${k}"><span class="ic">${k === 'ok' ? '✓' : k === 'warn' ? '!' : 'i'}</span><div>${h}</div></div>`;
   const oS = othR.sum;
   const overNote = oS.overYears
-    ? ` 다만 ${oS.overYears}년은 수령한도를 넘겨 ${fmtShort(oS.overAmount)}원을 연금외수령으로 꺼내요(<span class="bn n2">2</span> 퇴직금은 감면 없이 100%, <span class="bn n3">3</span>은 16.5%). 1,500만원과는 별개로 이 부분은 저율이 적용되지 않아요.`
+    ? ` 다만 ${oS.overYears}년은 수령한도를 넘겨 ${fmtShort(oS.overAmount)}원을 연금외수령으로 꺼내요(<span class="bn n2">2</span> 퇴직금은 감면 없이 100%, <span class="bn n3">3</span>은 ${T_OTHR}). ${T_SEP}만원과는 별개로 이 부분은 저율이 적용되지 않아요.`
     : '';
   let diag;
-  if (isCap) diag = box('ok', `<b>지금 1,500만원 맞춤 전략으로 계산하고 있어요.</b> 아래는 처음 금액(연 ${fmtMan(p.phase1Amount)})을 끝까지 같은 금액으로 받았을 때와 비교한 결과예요.`);
-  else if (hy.length && extra > 0.5) diag = box('warn', `<b>내 계획은 ${hy[0].age}세부터 ${hy.length}년간 <span class="bn n3">3</span>에서 1,500만원 넘게 받아요.</b> 1,500만원을 넘긴 탓에 붙은 추가 세금만 <b>약 ${fmtMan(extra)}</b>이에요(같은 돈을 저율 3.3~5.5%로 받았을 때와 비교).${overNote}`);
-  else if (hy.length) diag = box('ok', `<b>내 계획은 ${hy[0].age}세부터 ${hy.length}년간 <span class="bn n3">3</span>에서 1,500만원 넘게 받지만, 1,500만원을 넘겨도 종합과세가 더 유리해 추가 세금이 없어요.</b>${-extra >= 10000 ? ` 다른 소득이 적어 종합과세 세금이 같은 돈을 저율 3.3~5.5%로 받을 때보다 ${fmtMan(-extra)} 적어요.` : ''} 대신 그해에는 다음 해 5월 종합소득세 신고가 필요해요.${overNote}`);
-  else if (oS.pen3 > 0.5) diag = box(oS.overYears ? 'warn' : 'ok', `<b>내 계획은 이미 매년 <span class="bn n3">3</span>에서 연금으로 받는 돈이 1,500만원 이하예요.</b> ${oS.lowCompYears ? `저율 3.3~5.5%와 종합과세 중 유리한 쪽으로 끝나요(종합과세 유리 ${oS.lowCompYears}년).` : '지금 방식 그대로 저율 3.3~5.5%를 누릴 수 있어요.'}${overNote}`);
-  else diag = box(oS.overYears ? 'warn' : 'info', `<b>내 계획은 <span class="bn n3">3</span>에서 연금으로 받는 돈이 없어 1,500만원 기준과 상관없어요.</b>${overNote}`);
+  if (isCap) diag = box('ok', `<b>지금 ${T_SEP}만원 맞춤 전략으로 계산하고 있어요.</b> 아래는 처음 금액(연 ${fmtMan(p.phase1Amount)})을 끝까지 같은 금액으로 받았을 때와 비교한 결과예요.`);
+  else if (hy.length && extra > 0.5) diag = box('warn', `<b>내 계획은 ${hy[0].age}세부터 ${hy.length}년간 <span class="bn n3">3</span>에서 ${T_SEP}만원 넘게 받아요.</b> ${T_SEP}만원을 넘긴 탓에 붙은 추가 세금만 <b>약 ${fmtMan(extra)}</b>이에요(같은 돈을 저율 ${T_LOW}로 받았을 때와 비교).${overNote}`);
+  else if (hy.length) diag = box('ok', `<b>내 계획은 ${hy[0].age}세부터 ${hy.length}년간 <span class="bn n3">3</span>에서 ${T_SEP}만원 넘게 받지만, ${T_SEP}만원을 넘겨도 종합과세가 더 유리해 추가 세금이 없어요.</b>${-extra >= 10000 ? ` 다른 소득이 적어 종합과세 세금이 같은 돈을 저율 ${T_LOW}로 받을 때보다 ${fmtMan(-extra)} 적어요.` : ''} 대신 그해에는 다음 해 5월 종합소득세 신고가 필요해요.${overNote}`);
+  else if (oS.pen3 > 0.5) diag = box(oS.overYears ? 'warn' : 'ok', `<b>내 계획은 이미 매년 <span class="bn n3">3</span>에서 연금으로 받는 돈이 ${T_SEP}만원 이하예요.</b> ${oS.lowCompYears ? `저율 ${T_LOW}와 종합과세 중 유리한 쪽으로 끝나요(종합과세 유리 ${oS.lowCompYears}년).` : `지금 방식 그대로 저율 ${T_LOW}를 누릴 수 있어요.`}${overNote}`);
+  else diag = box(oS.overYears ? 'warn' : 'info', `<b>내 계획은 <span class="bn n3">3</span>에서 연금으로 받는 돈이 없어 ${T_SEP}만원 기준과 상관없어요.</b>${overNote}`);
   $('cap-diag').innerHTML = diag;
 
   const ph12 = capR.rows.filter(r => r.from1 + r.from2 > 0);
@@ -2176,11 +2198,11 @@ function renderCap(p, list, mine) {
       <ul class="vs-list">
         <li>받는 기간 <b>${rs.length}년 (${rs[0]?.age ?? '-'}~${rs[rs.length - 1]?.age ?? '-'}세)</b></li>
         <li>총 인출액 <b>${fmtShort(u.withdrawn)}원</b>${u.leftover > 10000 ? ` · 100세 잔액 <b>${fmtShort(u.leftover)}원</b>` : ''}</li>
-        <li><span class="bn n3">3</span> 1,500만원 초과 <span class="${h ? 'bad' : ''}">${h ? h + '년' : '없음'}</span></li>
+        <li><span class="bn n3">3</span> ${T_SEP}만원 초과 <span class="${h ? 'bad' : ''}">${h ? h + '년' : '없음'}</span></li>
       </ul></div>`;
   };
   const capBetter = capR.sum.effRate < othR.sum.effRate - 5e-5;   // 실효세율 기준 (cap-note와 동일)
-  $('cap-vs').innerHTML = vs(other, !capBetter, isCap ? '비교' : '지금') + vs(capS, capBetter, '1,500 맞춤');
+  $('cap-vs').innerHTML = vs(other, !capBetter, isCap ? '비교' : '지금') + vs(capS, capBetter, `${T_SEP} 맞춤`);
 
   // 3단계 처방 (내 숫자로)
   const retRate = p.b2 > 0 ? p.retTaxNat / p.b2 * RULE.LOCAL : 0;
@@ -2188,22 +2210,22 @@ function renderCap(p, list, mine) {
   if (ph12.length) {
     const a0 = ph12[0].age, a1 = ph12[ph12.length - 1].age;
     steps.push(['1단계', `<em>${a0}~${a1}세 (${ph12.length}년)</em> · <span class="bn n1">1</span><span class="bn n2">2</span> 바구니 구간은 필요한 만큼`,
-      `개시 직후에는 법에 정해진 순서대로 <span class="bn n1">1</span> 세액공제 받지 않은 원금 → <span class="bn n2">2</span> 퇴직금이 먼저 나가요. 이 돈은 <b>1,500만원 계산에 들어가지 않아서</b> 수령한도 안이라면 연 ${fmtMan(isCap ? p.phase1Amount : capS.p.phase1Amount)}을 받아도 괜찮아요.` +
-      (p.b2 > 0 ? ` 퇴직금은 오래 나눌수록 감면이 커지지만(30→40→50%), 내 퇴직소득세율 ${pct(retRate)} 기준 감면 10%p 차이는 퇴직금 1억원당 약 ${fmtMan(1e8 * retRate * 0.1)}이라 1,500만원 기준을 지키는 쪽이 더 중요해요.` : '')]);
+      `개시 직후에는 법에 정해진 순서대로 <span class="bn n1">1</span> 세액공제 받지 않은 원금 → <span class="bn n2">2</span> 퇴직금이 먼저 나가요. 이 돈은 <b>${T_SEP}만원 계산에 들어가지 않아서</b> 수령한도 안이라면 연 ${fmtMan(isCap ? p.phase1Amount : capS.p.phase1Amount)}을 받아도 괜찮아요.` +
+      (p.b2 > 0 ? ` 퇴직금은 오래 나눌수록 감면이 커지지만(${PPR.map(x => pctNum(1 - x[1])).join('→')}%), 내 퇴직소득세율 ${pct(retRate)} 기준 감면 10%p 차이는 퇴직금 1억원당 약 ${fmtMan(1e8 * retRate * 0.1)}이라 ${T_SEP}만원 기준을 지키는 쪽이 더 중요해요.` : '')]);
   }
   if (ph3.length) {
     const a0 = ph3[0].age, a1 = ph3[ph3.length - 1].age;
     steps.push([ph12.length ? '2단계' : '1단계', `<em>${a0}세부터</em> · <span class="bn n3">3</span> 바구니는 연 ${fmtMan(CAP)}(월 ${fmtMan(CAP / 12)}) 이하로`,
-      `여기서부터가 1,500만원 기준이 적용되는 구간이에요. 매년 ${fmtMan(CAP)} 이하로 받으면 저율 세율이 ${a0 < 70 ? '5.5%로 시작해 70세부터 4.4%, 80세부터 3.3%로 내려갑니다' : a0 < 80 ? '4.4%로 시작해 80세부터 3.3%로 내려갑니다' : '처음부터 가장 낮은 3.3%입니다'}.${capR.sum.lowCompYears ? ` 다른 소득이 적은 해(${capR.sum.lowCompYears}년)는 종합과세를 골라 세금이 더 줄어요(계산에 반영).` : ''} 이렇게 받으면 연금계좌가 <b>${a1}세${capR.sum.leftover > 10000 ? ' 이후까지' : '까지'}</b> 이어져요.`]);
+      `여기서부터가 ${T_SEP}만원 기준이 적용되는 구간이에요. 매년 ${fmtMan(CAP)} 이하로 받으면 저율 세율이 ${a0 < RBA[0][0] ? `${T_RATE[0]}로 시작해 ${RBA[0][0]}세부터 ${T_RATE[1]}, ${RBA[1][0]}세부터 ${T_RATE[2]}로 내려갑니다` : a0 < RBA[1][0] ? `${T_RATE[1]}로 시작해 ${RBA[1][0]}세부터 ${T_RATE[2]}로 내려갑니다` : `처음부터 가장 낮은 ${T_RATE[2]}입니다`}.${capR.sum.lowCompYears ? ` 다른 소득이 적은 해(${capR.sum.lowCompYears}년)는 종합과세를 골라 세금이 더 줄어요(계산에 반영).` : ''} 이렇게 받으면 연금계좌가 <b>${a1}세${capR.sum.leftover > 10000 ? ' 이후까지' : '까지'}</b> 이어져요.`]);
   }
   const firstW = othR.rows.length ? othR.rows[0].w : 0;
   const gap = Math.max(0, firstW - CAP);
   steps.push([steps.length ? `${steps.length + 1}단계` : '1단계', '모자란 생활비는 <em>연금계좌 밖에서</em>',
     gap > 0
       ? `<span class="bn n3">3</span> 구간에서는 처음보다 연 <b>${fmtMan(gap)}(월 ${fmtMan(gap / 12)})</b> 적게 받게 돼요. 이 차이를 <b>국민연금, ISA, 예금·일반계좌</b> 같은 연금계좌 밖의 돈으로 채우는 게 이 전략의 핵심입니다. 연금계좌 돈은 뒤로 미룰수록 낮은 세율로 오래 나와요.`
-      : `지금 계획한 금액이 이미 1,500만원 이하라 따로 메울 필요가 없어요. 생활비가 늘면 연금계좌보다 <b>ISA·예금 등 다른 돈</b>을 먼저 쓰는 습관이 1,500만원을 지켜 줍니다.`]);
+      : `지금 계획한 금액이 이미 ${T_SEP}만원 이하라 따로 메울 필요가 없어요. 생활비가 늘면 연금계좌보다 <b>ISA·예금 등 다른 돈</b>을 먼저 쓰는 습관이 ${T_SEP}만원을 지켜 줍니다.`]);
   steps.push(['TIP', '아직 납입 중이라면 <em>부부가 나눠서</em>',
-    '1,500만원은 <b>1인당</b> 기준이에요. 한 사람 계좌에 몰아 넣지 말고 부부 각자 명의 연금계좌에 나눠 넣으면, 나중에 두 사람이 각각 1,500만원(합계 3,000만원)까지 저율로 받을 수 있어요.']);
+    `${T_SEP}만원은 <b>1인당</b> 기준이에요. 한 사람 계좌에 몰아 넣지 말고 부부 각자 명의 연금계좌에 나눠 넣으면, 나중에 두 사람이 각각 ${T_SEP}만원(합계 ${T_SEP2}만원)까지 저율로 받을 수 있어요.`]);
   $('cap-steps').innerHTML = steps.map(([no, t, d]) => `<div class="cap-step ${no === 'TIP' ? 'tip' : ''}"><div class="cap-step-no">${no === 'TIP' ? 'TIP' : no.replace('단계', '')}${no === 'TIP' ? '' : '<small>단계</small>'}</div><div><div class="cap-step-t">${t}</div><div class="cap-step-d">${d}</div></div></div>`).join('');
 
   // 판단 기준은 비교 카드와 같은 실효세율(총 세금 ÷ 총 인출액). 받는 기간·총액이 달라 총 세금만으로는 비교가 불공정
@@ -2211,10 +2233,10 @@ function renderCap(p, list, mine) {
   const capLower = eC < eO - 5e-5;
   $('apply-cap').style.display = isCap ? 'none' : '';
   $('cap-note').innerHTML = isCap
-    ? `실효세율(총 세금 ÷ 총 인출액) 기준 1,500 맞춤 ${pct(eC)} vs 같은 금액 계속 ${pct(eO)}. STEP 02에서 금액을 바꿔 가며 내 생활비에 맞는 조합을 찾아보세요.`
+    ? `실효세율(총 세금 ÷ 총 인출액) 기준 ${T_SEP} 맞춤 ${pct(eC)} vs 같은 금액 계속 ${pct(eO)}. STEP 02에서 금액을 바꿔 가며 내 생활비에 맞는 조합을 찾아보세요.`
     : (capLower
         ? `실효세율(총 세금 ÷ 총 인출액) 기준 <b>${pct(eO)} → ${pct(eC)}</b>로 낮아져요. 총 세금 ${fmtShort(othR.sum.tax)}원 → ${fmtShort(capR.sum.tax)}원, 총 인출액 ${fmtShort(othR.sum.withdrawn)}원 → <b>${capR.rows.length}년간 ${fmtShort(capR.sum.withdrawn)}원</b> (STEP 02가 자동으로 바뀝니다)`
-        : `실효세율(총 세금 ÷ 총 인출액) 기준으로는 지금 계획(${pct(eO)})이 1,500 맞춤(${pct(eC)})보다 낮거나 같아요. 지금 계획을 유지해도 괜찮아요.`);
+        : `실효세율(총 세금 ÷ 총 인출액) 기준으로는 지금 계획(${pct(eO)})이 ${T_SEP} 맞춤(${pct(eC)})보다 낮거나 같아요. 지금 계획을 유지해도 괜찮아요.`);
 }
 
 function renderSplit(p, mine) {
@@ -2227,7 +2249,7 @@ function renderSplit(p, mine) {
     $('want').value = Math.round(w0 / 10000).toLocaleString();
   }
   const want = Math.max(100000, num('want'));
-  const CAP = 15000000;
+  const CAP = SEP;
   const sp = simulate({ ...p, mode: 'split', desired: want, capAmount: CAP });
   // '그냥 같은 금액 받기'가 내 계획(기간·금액 방식)과 같은 금액이면 내 계획 결과를 그대로 쓴다.
   // (입력칸이 만원 단위로 반올림돼 따로 계산하면 KEY INSIGHT·STEP 04와 세금이 몇만 원 어긋남)
@@ -2239,7 +2261,7 @@ function renderSplit(p, mine) {
 
   const s3 = Math.min(CAP, want), s12 = Math.max(0, want - CAP);
   $('split-formula').innerHTML = want <= CAP
-    ? `<div class="sf-box s3"><small>3 세액공제 받은 원금·수익</small><b>${fmtShort(want)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년</small><b>${fmtShort(want)}</b></div><div style="font-size:14px;font-weight:700;color:var(--green);">1,500만원 이하라 계좌를 나눌 필요가 없어요</div>`
+    ? `<div class="sf-box s3"><small>3 세액공제 받은 원금·수익</small><b>${fmtShort(want)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년</small><b>${fmtShort(want)}</b></div><div style="font-size:14px;font-weight:700;color:var(--green);">${T_SEP}만원 이하라 계좌를 나눌 필요가 없어요</div>`
     : `<div class="sf-box s3"><small>3 세액공제 받은 원금·수익 (꽉 채우기)</small><b>${fmtShort(s3)}</b></div><span class="sf-op">+</span><div class="sf-box s12"><small>1·2 세액공제 받지 않은 원금·퇴직금 (보충)</small><b>${fmtShort(s12)}</b></div><span class="sf-op">=</span><div class="sf-box tot"><small>매년 받는 돈</small><b>${fmtShort(want)}</b></div>`;
 
   // 구간 묶기
@@ -2265,7 +2287,7 @@ function renderSplit(p, mine) {
   // 비교
   const keep = (res) => { const k = res.rows.filter(r => r.w >= want - 10000); return k.length ? `${k.length}년 (${k[0].age}~${k[k.length - 1].age}세)` : '없음'; };
   const hi = (res) => res.rows.filter(r => r.p3 > RULE.SEP_LIMIT).length;
-  const cmp = [['그냥 같은 금액 받기', sm], ['순서대로 1,500 맞춤', cp], ['계좌 나누기', sp]];
+  const cmp = [['그냥 같은 금액 받기', sm], [`순서대로 ${T_SEP} 맞춤`, cp], ['계좌 나누기', sp]];
   const minEff = Math.min(...cmp.filter(c => c[1].sum.withdrawn > 0).map(c => c[1].sum.effRate));
   cmp.forEach(c => { c[2] = c[1].sum.withdrawn > 0 && c[1].sum.effRate <= minEff + 5e-5 ? 'pick' : ''; });
   $('split-cmp').querySelector('tbody').innerHTML = cmp.map(([n, r, c]) => `<tr class="${c}"><td>${n}${c ? '<span class="best-badge">실효세율 최저</span>' : ''}</td><td>${keep(r)}</td><td class="${hi(r) ? 'warn' : ''}">${hi(r) ? hi(r) + '년' : '없음'}</td><td>${fmtT(r.sum.tax)}</td><td>${pct(r.sum.effRate)}</td></tr>`).join('');
@@ -2287,11 +2309,11 @@ function renderInsight(p, list, mine, lump) {
   const tips = [];
   tips.push(`세금 구조의 핵심은 <strong>어느 바구니에서, 한도 안에서, 1년에 얼마씩</strong> 꺼내느냐입니다. 같은 돈이라도 이 세 가지에 따라 적용되는 세율이 몇 배씩 차이 납니다.`);
   const capS = list.find(s => s.key === 'cap');
-  if (capS && capS.res.sum.effRate < S.effRate - 5e-4) tips.push(`<span class="bn n3">3</span> 바구니를 연 1,500만원 이하로 맞추는 <strong>1,500만원 맞춤 전략</strong>으로 바꾸면 실효세율이 ${pct(S.effRate)} → ${pct(capS.res.sum.effRate)}로 낮아져요. 대신 그 구간의 부족한 생활비는 연금계좌 밖에서 채워야 합니다.`);
+  if (capS && capS.res.sum.effRate < S.effRate - 5e-4) tips.push(`<span class="bn n3">3</span> 바구니를 연 ${T_SEP}만원 이하로 맞추는 <strong>${T_SEP}만원 맞춤 전략</strong>으로 바꾸면 실효세율이 ${pct(S.effRate)} → ${pct(capS.res.sum.effRate)}로 낮아져요. 대신 그 구간의 부족한 생활비는 연금계좌 밖에서 채워야 합니다.`);
   const spS = list.find(s => s.key === 'split');
-  if (spS && S.highYears && spS.res.sum.effRate < S.effRate - 5e-4) tips.push(`같은 금액이 필요하다면 <strong>계좌 나누기</strong>(<span class="bn n3">3</span>은 연 1,500만원까지, 부족분은 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서)로 실효세율을 ${pct(S.effRate)} → ${pct(spS.res.sum.effRate)}로 낮출 수 있어요.`);
+  if (spS && S.highYears && spS.res.sum.effRate < S.effRate - 5e-4) tips.push(`같은 금액이 필요하다면 <strong>계좌 나누기</strong>(<span class="bn n3">3</span>은 연 ${T_SEP}만원까지, 부족분은 <span class="bn n1">1</span>·<span class="bn n2">2</span>에서)로 실효세율을 ${pct(S.effRate)} → ${pct(spS.res.sum.effRate)}로 낮출 수 있어요.`);
   if (best && best.key !== 'mine') tips.push(`비교한 방법 중에서는 <strong>${best.name}</strong>의 실효세율이 ${pct(best.res.sum.effRate)}로 가장 낮았어요.`);
-  if (S.highYears) tips.push(`<span class="bn n3">3</span> 바구니에서 1년에 1,500만원을 넘게 받는 해가 ${S.highYears}년 있어요. 국민연금 등 다른 소득이 많다면 이 구간의 세금이 커질 수 있으니 고급 설정에 입력해 확인해 보세요.`);
+  if (S.highYears) tips.push(`<span class="bn n3">3</span> 바구니에서 1년에 ${T_SEP}만원을 넘게 받는 해가 ${S.highYears}년 있어요. 국민연금 등 다른 소득이 많다면 이 구간의 세금이 커질 수 있으니 고급 설정에 입력해 확인해 보세요.`);
   if (p.b2 > 0) tips.push(`퇴직금은 <strong>실제로 받은 해</strong>만 감면 연차로 쌓여요. 당장 돈이 필요 없어도 자격이 생기면 소액이라도 개시해 두는 게 유리합니다.`);
   $('ins-desc').innerHTML = '<ul>' + tips.map(t => `<li>${t}</li>`).join('') + '</ul>';
 }
@@ -2454,7 +2476,7 @@ $('apply-cap').addEventListener('click', () => {
   const p = readParams();
   const r = simulate(p);
   const w0 = r.rows.length ? Math.round(r.rows[0].w / 10000) : 2400;
-  $('phase1').value = w0.toLocaleString(); $('capamt').value = '1,500';
+  $('phase1').value = w0.toLocaleString(); $('capamt').value = T_SEP;
   pick('mode-seg', 'cap'); pick('cap-style', 'seq');
   render();
   document.querySelectorAll('.card')[2].scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2463,7 +2485,7 @@ bindSeg('cap-style', 'capStyle');
 $('want').addEventListener('input', () => { wantTouched = true; });
 $('apply-split').addEventListener('click', () => {
   const w = Math.round(Math.max(100000, num('want')) / 10000);
-  $('phase1').value = w.toLocaleString(); $('capamt').value = '1,500';
+  $('phase1').value = w.toLocaleString(); $('capamt').value = T_SEP;
   pick('mode-seg', 'cap'); pick('cap-style', 'split');
   wantTouched = true;
   render();

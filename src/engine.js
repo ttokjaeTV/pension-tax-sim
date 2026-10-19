@@ -1,50 +1,47 @@
 /* ===== 연금인출 세금 엔진 (2026년 세법 기준) ===== */
+/* 제도 숫자(세율·한도·구간표·건보료 요율)는 공용 기준 파일 rules.js의 전역 TTOKJAE_RULES에서 읽는다.
+   → 이 파일보다 먼저 <script src="https://ttokjaetv.github.io/rules/v2026.1/rules.js"> 를 불러야 함 (Node 테스트는 global.TTOKJAE_RULES). */
 /* 주의: 은퇴 5년 전 점검 가이드(ttokjaeTV/retire-check)가 이 파일(src/engine.js)을 직접 불러 4단계 세금을 계산합니다.
    simulate · retirementTax 함수 이름과 입력·출력 형식을 바꾸면 가이드도 같이 확인하세요. */
 const RULE = {
-  LOCAL: 1.1,                 // 지방소득세 10% 가산
-  SEP_LIMIT: 15000000,        // 사적연금 저율 분리과세 기준 (연)
-  SEP_RATE: 0.15,             // 1,500만원 초과 시 선택 분리과세 (국세)
-  OTHER_RATE: 0.15,           // 연금외수령 기타소득세 (국세)
-  BASIC_DEDUCTION: 1500000,   // 본인 기본공제
-  ELDER_DEDUCTION: 1000000,   // 경로우대공제 (70세 이상, 소득세법 51조①1호)
-  STD_CREDIT: 70000,          // 표준세액공제 (근로소득 없는 종합소득자, 소득세법 59조의4⑨2호나목)
+  LOCAL: 1 + TTOKJAE_RULES.INCOME_TAX.local,                  // 지방소득세 10% 가산 (1.1)
+  SEP_LIMIT: TTOKJAE_RULES.PENSION.separateLimit,             // 사적연금 저율 분리과세 기준 (연 1,500만원)
+  SEP_RATE: TTOKJAE_RULES.PENSION.separateRateNational,       // 1,500만원 초과 시 선택 분리과세 (국세 15%)
+  OTHER_RATE: TTOKJAE_RULES.PENSION.otherIncomeRateNational,  // 연금외수령 기타소득세 (국세 15%)
+  BASIC_DEDUCTION: TTOKJAE_RULES.INCOME_TAX.basicDeduction,   // 본인 기본공제 (150만원)
+  ELDER_DEDUCTION: TTOKJAE_RULES.INCOME_TAX.elderDeduction,   // 경로우대공제 (70세 이상 100만원, 소득세법 51조①1호)
+  STD_CREDIT: TTOKJAE_RULES.INCOME_TAX.standardTaxCredit,     // 표준세액공제 (7만원, 근로소득 없는 종합소득자, 소득세법 59조의4⑨2호나목)
 };
 
-// 연금소득세율 (국세) - 확정기간형, 수령 시점 나이
+// 연금소득세율 (국세) - 확정기간형, 수령 시점 나이 (rules: [나이 상한(미만), 세율] = [[70, 5%], [80, 4%], [∞, 3%]])
 function pensionRate(age) {
-  if (age >= 80) return 0.03;
-  if (age >= 70) return 0.04;
-  return 0.05;
+  const T = TTOKJAE_RULES.PENSION.rateByAgeNational;
+  for (let i = T.length - 1; i > 0; i--) if (age >= T[i - 1][0]) return T[i][1];   // 높은 구간부터: 80세 이상 → 70세 이상
+  return T[0][1];
 }
 
 // 이연퇴직소득 연금수령 시 퇴직소득세 납부 비율 (실제 수령연차)
 function retireFactor(n) {
-  if (n <= 10) return 0.7;
-  if (n <= 20) return 0.6;
-  return 0.5;
+  const T = TTOKJAE_RULES.RETIREMENT_INCOME_TAX.pensionPayRatio;   // [[10, 0.7], [20, 0.6], [∞, 0.5]]
+  for (let i = 0; i < T.length - 1; i++) if (n <= T[i][0]) return T[i][1];
+  return T[T.length - 1][1];
 }
 
 // 종합소득세 기본세율 (국세)
 function progressiveTax(base) {
   if (base <= 0) return 0;
-  const B = [
-    [14e6, 0.06, 0], [50e6, 0.15, 1.26e6], [88e6, 0.24, 5.76e6],
-    [150e6, 0.35, 15.44e6], [300e6, 0.38, 19.94e6], [500e6, 0.40, 25.94e6],
-    [1e9, 0.42, 35.94e6], [Infinity, 0.45, 65.94e6],
-  ];
+  const B = TTOKJAE_RULES.INCOME_TAX.brackets;   // [과세표준 상한, 세율, 누진공제]
   for (const [lim, r, d] of B) if (base <= lim) return base * r - d;
   return 0;
 }
 
 // 연금소득공제 (한도 900만원)
 function pensionDeduction(total) {
-  let d;
-  if (total <= 3.5e6) d = total;
-  else if (total <= 7e6) d = 3.5e6 + (total - 3.5e6) * 0.4;
-  else if (total <= 14e6) d = 4.9e6 + (total - 7e6) * 0.2;
-  else d = 6.3e6 + (total - 14e6) * 0.1;
-  return Math.min(d, 9e6);
+  const T = TTOKJAE_RULES.INCOME_TAX.pensionIncomeDeduction;   // [총연금액 상한, 공제율, 구간 시작, 누적공제]
+  let i = 0;
+  while (i < T.length - 1 && !(total <= T[i][0])) i++;
+  const d = T[i][3] + (total - T[i][2]) * T[i][1];
+  return Math.min(d, TTOKJAE_RULES.INCOME_TAX.pensionIncomeDeductionCap);
 }
 
 // 종합소득세 (지방세 포함) - 연금소득 + 기타 종합소득금액
@@ -53,7 +50,7 @@ function pensionDeduction(total) {
 function comprehensiveTax(publicPension, privatePension, otherIncome, age) {
   const total = publicPension + privatePension;
   const income = total - pensionDeduction(total) + otherIncome;
-  const ded = RULE.BASIC_DEDUCTION + (age >= 70 ? RULE.ELDER_DEDUCTION : 0);
+  const ded = RULE.BASIC_DEDUCTION + (age >= TTOKJAE_RULES.INCOME_TAX.elderAge ? RULE.ELDER_DEDUCTION : 0);
   const base = Math.max(0, income - ded);
   return Math.max(0, progressiveTax(base) - RULE.STD_CREDIT) * RULE.LOCAL;
 }
@@ -61,18 +58,16 @@ function comprehensiveTax(publicPension, privatePension, otherIncome, age) {
 // 퇴직소득세 (국세) 간이 계산 - 근속연수공제·환산급여공제 (2023년 이후)
 function retirementTax(severance, years) {
   years = Math.max(1, Math.ceil(years));
-  let sd;
-  if (years <= 5) sd = 1e6 * years;
-  else if (years <= 10) sd = 5e6 + 2e6 * (years - 5);
-  else if (years <= 20) sd = 15e6 + 2.5e6 * (years - 10);
-  else sd = 40e6 + 3e6 * (years - 20);
+  const RT = TTOKJAE_RULES.RETIREMENT_INCOME_TAX;
+  const SY = RT.serviceYearDeduction;   // [근속연수 상한, 1년당 공제, 구간 시작 연수, 누적공제]
+  let i = 0;
+  while (i < SY.length - 1 && !(years <= SY[i][0])) i++;
+  const sd = SY[i][3] + SY[i][1] * (years - SY[i][2]);
   const conv = Math.max(0, severance - sd) * 12 / years;
-  let cd;
-  if (conv <= 8e6) cd = conv;
-  else if (conv <= 70e6) cd = 8e6 + (conv - 8e6) * 0.6;
-  else if (conv <= 100e6) cd = 45.2e6 + (conv - 70e6) * 0.55;
-  else if (conv <= 300e6) cd = 61.7e6 + (conv - 100e6) * 0.45;
-  else cd = 151.7e6 + (conv - 300e6) * 0.35;
+  const CP = RT.convertedPayDeduction;  // [환산급여 상한, 공제율, 구간 시작 금액, 누적공제]
+  let j = 0;
+  while (j < CP.length - 1 && !(conv <= CP[j][0])) j++;
+  const cd = CP[j][3] + (conv - CP[j][2]) * CP[j][1];
   const base = Math.max(0, conv - cd);
   return Math.max(0, progressiveTax(base) * years / 12);
 }
@@ -133,7 +128,8 @@ function simulate(p) {
     return { rows, sum };
   }
 
-  const baseYear = p.pre2013 ? 6 : 1;
+  const PEN = TTOKJAE_RULES.PENSION;
+  const baseYear = p.pre2013 ? PEN.pre2013StartYear : 1;
   const plannedYears = p.mode === 'years' ? Math.max(1, Math.round(p.years)) : null;
   const fixedPay = p.mode === 'years' ? levelPayment(total0, r, plannedYears) : p.amount;
   const MAX_YEARS = 60;
@@ -145,7 +141,7 @@ function simulate(p) {
     const age = p.startAge + i;
     const n = i + 1;                                   // 실제 수령연차 (매년 인출 가정)
     const limitYear = baseYear + Math.max(0, age - p.eligAge); // 한도 계산용 연차
-    const limit = limitYear >= 11 ? Infinity : startBal / (11 - limitYear) * 1.2;
+    const limit = limitYear >= PEN.payoutLimitFreeYear ? Infinity : startBal / (PEN.payoutLimitFreeYear - limitYear) * PEN.payoutLimitFactor;
 
     if (p.mode === 'years' && i >= plannedYears) break;
     if (p.mode !== 'years' && age > MAX_AGE) break;     // 금액·맞춤 모드는 100세까지만
@@ -209,13 +205,13 @@ function simulate(p) {
         const low = p3 * pensionRate(age) * RULE.LOCAL;
         lowFlag = true;
         if (comp < low) { tPen = comp; method = '종합과세 선택'; sum.lowCompYears++; }
-        else { tPen = low; method = '저율 ' + (pensionRate(age) * 110).toFixed(1) + '%'; }
+        else { tPen = low; method = '저율 ' + (pensionRate(age) * RULE.LOCAL * 100).toFixed(1) + '%'; }
       } else {
         // 1,500만원 초과: 전액 종합과세 vs 16.5% 분리과세 중 선택 (소득세법 64조의4)
         const sep = p3 * RULE.SEP_RATE * RULE.LOCAL;
         highFlag = true;
         if (comp < sep) { tPen = comp; method = '종합과세 선택'; sum.compYears++; }
-        else { tPen = sep; method = '분리과세 16.5%'; sum.sepYears++; }
+        else { tPen = sep; method = '분리과세 ' + (+(PEN.separateRate * 100).toFixed(10)) + '%'; sum.sepYears++; }
       }
     }
     const tOth = out.b3 * RULE.OTHER_RATE * RULE.LOCAL;
@@ -261,33 +257,35 @@ function simulate(p) {
    재산 등급표: 국민건강보험법 시행령 별표 4 (2024-05-07 개정, 재산 기본공제 1억원)
    주택 재산세 과세표준: 공시가격 × 공정시장가액비율(1주택 특례 3억 이하 43%·6억 이하 44%·초과 45%, 2주택 이상 60%) */
 const NH = {
-  hi: 0.0719, ltc: 0.009448,             // 건강보험료율 · 장기요양보험료율(소득 대비)
-  floorIncomeM: 280000, floorPrem: 20160, // 지역 소득월액 하한 · 하한 보험료
-  capPremM: 4591740,                      // 소득 보험료 상한(월)
-  perPoint: 211.5, propDed: 1e8,          // 재산 부과점수당 금액 · 재산 기본공제
-  finMin: 10e6,                           // 이자·배당 1인 연 1,000만원 이하면 건보료 소득 제외(넘으면 전액)
-  pubRate: 0.5,                           // 지역가입자 공적연금 반영 비율
-  depIncome: 20e6, depBiz: 5e6, depProp1: 5.4e8, depProp2: 9e8, depPropIncome: 10e6,
+  hi: TTOKJAE_RULES.NHIS.healthRate, ltc: TTOKJAE_RULES.NHIS.ltcRate,          // 건강보험료율 · 장기요양보험료율(소득 대비)
+  floorIncomeM: TTOKJAE_RULES.NHIS.floorIncomeMonthly,                          // 지역 소득월액 하한
+  floorPrem: TTOKJAE_RULES.NHIS.premiumFloorMonthly,                            // 하한 보험료
+  capPremM: TTOKJAE_RULES.NHIS.premiumCapMonthly,                               // 소득 보험료 상한(월)
+  perPoint: TTOKJAE_RULES.NHIS.perPoint, propDed: TTOKJAE_RULES.NHIS.propertyDeduction,  // 재산 부과점수당 금액 · 재산 기본공제
+  finMin: TTOKJAE_RULES.NHIS.finIncomeThreshold,     // 이자·배당 1인 연 1,000만원 이하면 건보료 소득 제외(넘으면 전액)
+  pubRate: TTOKJAE_RULES.NHIS.publicPensionRatio,    // 지역가입자 공적연금 반영 비율
+  depIncome: TTOKJAE_RULES.NHIS.dependent.income, depBiz: TTOKJAE_RULES.NHIS.dependent.biz,
+  depProp1: TTOKJAE_RULES.NHIS.dependent.propLow, depProp2: TTOKJAE_RULES.NHIS.dependent.propHigh,
+  depPropIncome: TTOKJAE_RULES.NHIS.dependent.propIncome,
 };
-// [재산금액 상한(만원), 점수] 1~60등급
-const NH_PROP = [[450,22],[900,44],[1350,66],[1800,97],[2250,122],[2700,146],[3150,171],[3600,195],[4050,219],[4500,244],
-  [5020,268],[5590,294],[6220,320],[6930,344],[7710,365],[8590,386],[9570,412],[10700,439],[11900,465],[13300,490],
-  [14800,516],[16400,535],[18300,559],[20400,586],[22700,611],[25300,637],[28100,659],[31300,681],[34900,706],[38800,731],
-  [43200,757],[48100,785],[53600,812],[59700,841],[66500,881],[74000,921],[82400,961],[91800,1001],[103000,1041],[114000,1091],
-  [127000,1141],[142000,1191],[158000,1241],[176000,1291],[196000,1341],[218000,1391],[242000,1451],[270000,1511],[300000,1571],[330000,1641],
-  [363000,1711],[399300,1781],[439230,1851],[483153,1921],[531468,1991],[584615,2061],[643077,2131],[707385,2201],[778124,2271],[Infinity,2341]];
+// [재산금액 상한(만원), 점수] 1~60등급 (국민건강보험법 시행령 별표 4)
+const NH_PROP = TTOKJAE_RULES.NHIS.propertyPointTable;
 
 // 주택 재산세 과세표준 (gongsi: 공시가격 합계, multi: 2주택 이상)
 function houseTaxBase(gongsi, multi) {
   if (!(gongsi > 0)) return 0;
-  if (multi) return gongsi * 0.6;
-  return gongsi * (gongsi <= 3e8 ? 0.43 : gongsi <= 6e8 ? 0.44 : 0.45);
+  const PR = TTOKJAE_RULES.PROPERTY;
+  if (multi) return gongsi * PR.fairMarketRatioMultiHome;
+  const T = PR.fairMarketRatioSingleHome;   // [공시가격 상한, 비율] = [[3억, 43%], [6억, 44%], [∞, 45%]]
+  let i = 0;
+  while (i < T.length - 1 && !(gongsi <= T[i][0])) i++;
+  return gongsi * T[i][1];
 }
 function propPoints(taxBase) {
   const man = (taxBase - NH.propDed) / 1e4;
   if (man <= 0) return 0;
   for (const [lim, pt] of NH_PROP) if (man <= lim) return pt;
-  return 2341;
+  return NH_PROP[NH_PROP.length - 1][1];
 }
 // 건보료 소득에 잡히는 금융소득 (1인 기준)
 const nhFin = f => (f > NH.finMin ? f : 0);
