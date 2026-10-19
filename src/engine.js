@@ -7,6 +7,7 @@ const RULE = {
   SEP_RATE: 0.15,             // 1,500만원 초과 시 선택 분리과세 (국세)
   OTHER_RATE: 0.15,           // 연금외수령 기타소득세 (국세)
   BASIC_DEDUCTION: 1500000,   // 본인 기본공제
+  ELDER_DEDUCTION: 1000000,   // 경로우대공제 (70세 이상, 소득세법 51조①1호)
   STD_CREDIT: 70000,          // 표준세액공제 (근로소득 없는 종합소득자, 소득세법 59조의4⑨2호나목)
 };
 
@@ -47,11 +48,13 @@ function pensionDeduction(total) {
 }
 
 // 종합소득세 (지방세 포함) - 연금소득 + 기타 종합소득금액
+// 인적공제: 본인 기본공제 150만 + 70세 이상 경로우대 100만 (1인 기준, 배우자·부양가족 공제 제외)
 // 산출세액 − 표준세액공제 7만원(0원 미만 없음) → 지방소득세 10% 가산
-function comprehensiveTax(publicPension, privatePension, otherIncome) {
+function comprehensiveTax(publicPension, privatePension, otherIncome, age) {
   const total = publicPension + privatePension;
   const income = total - pensionDeduction(total) + otherIncome;
-  const base = Math.max(0, income - RULE.BASIC_DEDUCTION);
+  const ded = RULE.BASIC_DEDUCTION + (age >= 70 ? RULE.ELDER_DEDUCTION : 0);
+  const base = Math.max(0, income - ded);
   return Math.max(0, progressiveTax(base) - RULE.STD_CREDIT) * RULE.LOCAL;
 }
 
@@ -199,8 +202,8 @@ function simulate(p) {
     if (p3 > 0) {
       // 종합과세 시 ③ 때문에 늘어나는 세금 = (공적+③) − (공적만), 표준세액공제 반영
       const pub = (p.publicStartAge == null || age >= p.publicStartAge) ? (p.publicPension || 0) : 0;
-      const comp = comprehensiveTax(pub, p3, p.otherIncome || 0)
-                 - comprehensiveTax(pub, 0, p.otherIncome || 0);
+      const comp = comprehensiveTax(pub, p3, p.otherIncome || 0, age)
+                 - comprehensiveTax(pub, 0, p.otherIncome || 0, age);
       if (p3 <= RULE.SEP_LIMIT) {
         // 1,500만원 이하: 저율 분리과세(3.3~5.5%)가 기본, 종합과세 합산도 선택 가능 (소득세법 14조③9호 괄호)
         const low = p3 * pensionRate(age) * RULE.LOCAL;
@@ -296,12 +299,12 @@ function nhRegional(o) {
   const income = pubs.reduce((a, v) => a + Math.max(0, v) * NH.pubRate, 0)
                + fins.reduce((a, v) => a + nhFin(Math.max(0, v)), 0) + Math.max(0, o.other || 0);
   const m = income / 12;
-  const incPrem = m <= NH.floorIncomeM ? NH.floorPrem : Math.min(NH.capPremM, m * NH.hi);
+  const incPrem = Math.max(NH.floorPrem, Math.min(NH.capPremM, m * NH.hi));   // 하한 보험료 아래로 내려가지 않게 (소득월액 28만~28.04만 구간 포함)
   const pts = propPoints(o.taxBase || 0);
   const propPrem = pts * NH.perPoint;
   const health = incPrem + propPrem;
   const ltc = health * NH.ltc / NH.hi;
-  return { income, m, incPrem, pts, propPrem, health, ltc, total: health + ltc, floor: m <= NH.floorIncomeM };
+  return { income, m, incPrem, pts, propPrem, health, ltc, total: health + ltc, floor: incPrem <= NH.floorPrem };
 }
 
 /* 피부양자 요건 (가족 중 직장가입자가 있을 때)

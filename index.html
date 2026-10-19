@@ -1303,7 +1303,7 @@
   <footer>
     🔒 입력한 숫자는 이 브라우저 안에서만 계산되며, 서버로 보내거나 따로 저장하지 않습니다.<br>
     ※ 2026년 10월 현행 소득세법 기준의 단순화 계산입니다. 매년 연초에 같은 금액을 꺼내고 남은 돈은 입력한 수익률로 운용된다고 가정했습니다.<br>
-    ※ 의료비·부득이한 사유 인출, 종신형 연금, 외국납부세액공제, 종합과세 시 표준세액공제(7만원) 외 세액공제와 본인 기본공제 외 인적공제는 반영하지 않았습니다. 퇴직소득세 간이 계산은 실제 원천징수영수증 금액과 다를 수 있으니 가능하면 '영수증 세액 입력'을 사용하세요.<br>
+    ※ 의료비·부득이한 사유 인출, 종신형 연금, 외국납부세액공제, 종합과세 시 표준세액공제(7만원) 외 세액공제와 본인 기본공제·경로우대공제(70세 이상 100만원) 외 인적공제(배우자 공제 등)는 반영하지 않았습니다. 퇴직소득세 간이 계산은 실제 원천징수영수증 금액과 다를 수 있으니 가능하면 '영수증 세액 입력'을 사용하세요.<br>
     ※ 실제 세금은 금융회사 원천징수 및 개인 상황에 따라 달라질 수 있으며, 본 도구는 세무·투자 자문이 아닙니다.
   </footer>
 </div>
@@ -1398,6 +1398,7 @@ const RULE = {
   SEP_RATE: 0.15,             // 1,500만원 초과 시 선택 분리과세 (국세)
   OTHER_RATE: 0.15,           // 연금외수령 기타소득세 (국세)
   BASIC_DEDUCTION: 1500000,   // 본인 기본공제
+  ELDER_DEDUCTION: 1000000,   // 경로우대공제 (70세 이상, 소득세법 51조①1호)
   STD_CREDIT: 70000,          // 표준세액공제 (근로소득 없는 종합소득자, 소득세법 59조의4⑨2호나목)
 };
 
@@ -1438,11 +1439,13 @@ function pensionDeduction(total) {
 }
 
 // 종합소득세 (지방세 포함) - 연금소득 + 기타 종합소득금액
+// 인적공제: 본인 기본공제 150만 + 70세 이상 경로우대 100만 (1인 기준, 배우자·부양가족 공제 제외)
 // 산출세액 − 표준세액공제 7만원(0원 미만 없음) → 지방소득세 10% 가산
-function comprehensiveTax(publicPension, privatePension, otherIncome) {
+function comprehensiveTax(publicPension, privatePension, otherIncome, age) {
   const total = publicPension + privatePension;
   const income = total - pensionDeduction(total) + otherIncome;
-  const base = Math.max(0, income - RULE.BASIC_DEDUCTION);
+  const ded = RULE.BASIC_DEDUCTION + (age >= 70 ? RULE.ELDER_DEDUCTION : 0);
+  const base = Math.max(0, income - ded);
   return Math.max(0, progressiveTax(base) - RULE.STD_CREDIT) * RULE.LOCAL;
 }
 
@@ -1590,8 +1593,8 @@ function simulate(p) {
     if (p3 > 0) {
       // 종합과세 시 ③ 때문에 늘어나는 세금 = (공적+③) − (공적만), 표준세액공제 반영
       const pub = (p.publicStartAge == null || age >= p.publicStartAge) ? (p.publicPension || 0) : 0;
-      const comp = comprehensiveTax(pub, p3, p.otherIncome || 0)
-                 - comprehensiveTax(pub, 0, p.otherIncome || 0);
+      const comp = comprehensiveTax(pub, p3, p.otherIncome || 0, age)
+                 - comprehensiveTax(pub, 0, p.otherIncome || 0, age);
       if (p3 <= RULE.SEP_LIMIT) {
         // 1,500만원 이하: 저율 분리과세(3.3~5.5%)가 기본, 종합과세 합산도 선택 가능 (소득세법 14조③9호 괄호)
         const low = p3 * pensionRate(age) * RULE.LOCAL;
@@ -1687,12 +1690,12 @@ function nhRegional(o) {
   const income = pubs.reduce((a, v) => a + Math.max(0, v) * NH.pubRate, 0)
                + fins.reduce((a, v) => a + nhFin(Math.max(0, v)), 0) + Math.max(0, o.other || 0);
   const m = income / 12;
-  const incPrem = m <= NH.floorIncomeM ? NH.floorPrem : Math.min(NH.capPremM, m * NH.hi);
+  const incPrem = Math.max(NH.floorPrem, Math.min(NH.capPremM, m * NH.hi));   // 하한 보험료 아래로 내려가지 않게 (소득월액 28만~28.04만 구간 포함)
   const pts = propPoints(o.taxBase || 0);
   const propPrem = pts * NH.perPoint;
   const health = incPrem + propPrem;
   const ltc = health * NH.ltc / NH.hi;
-  return { income, m, incPrem, pts, propPrem, health, ltc, total: health + ltc, floor: m <= NH.floorIncomeM };
+  return { income, m, incPrem, pts, propPrem, health, ltc, total: health + ltc, floor: incPrem <= NH.floorPrem };
 }
 
 /* 피부양자 요건 (가족 중 직장가입자가 있을 때)

@@ -123,10 +123,21 @@ eq('다른소득 5천 종합세(③없음) 6,539,500', E.comprehensiveTax(0, 0, 
 eq('다른소득 5천 종합세(③1천) 7,579,000', E.comprehensiveTax(0, 1e7, 5e7), 7579000);
 eq('≤1500 저율 유지 550,000', res.rows[0].taxPension, 550000);
 eq('≤1500 저율 method', res.rows[0].method === '저율 5.5%' ? 1 : 0, 1, 0);
-// 80세, ③ 1,500만, 다른 소득 0 → 종합 391,600 < 3.3% 495,000
+// 80세, ③ 1,500만, 다른 소득 0 → 경로우대 100만 반영 과표 610만 × 6% = 36.6만 − 7만 = 29.6만 × 1.1 = 325,600 < 3.3% 495,000
 res = E.simulate({ startAge: 80, eligAge: 55, pre2013: false, b1: 0, b2: 0, retTaxNat: 0, b3: 3e7,
   r: 0, mode: 'amount', amount: 1.5e7, publicPension: 0, otherIncome: 0 });
-eq('80세 ≤1500 종합 선택 391,600', res.rows[0].taxPension, 391600);
+eq('80세 ≤1500 종합 선택 325,600 (경로우대)', res.rows[0].taxPension, 325600);
+// 15-2) 경로우대공제 100만 (70세 이상, 소득세법 51조①1호) — 6% 구간이면 세금 100만 × 6% × 1.1 = 66,000 줄어듦 (retire-drawdown과 같음)
+eq('69세 ③ 1,500만 종합세 391,600 (경로우대 없음)', E.comprehensiveTax(0, 1.5e7, 0, 69), 391600);
+eq('70세 ③ 1,500만 종합세 325,600', E.comprehensiveTax(0, 1.5e7, 0, 70), 325600);
+eq('나이 없으면 경로우대 없음', E.comprehensiveTax(0, 1.5e7, 0), 391600);
+for (const amt of [1.2e7, 1.5e7, 1.501e7, 2e7]) for (const age of [70, 80])
+  eq(`경로우대 ③ ${amt / 1e4}만 ${age}세 −66,000`, E.comprehensiveTax(0, amt, 0, age) - E.comprehensiveTax(0, amt, 0, 69), -66000);
+// 72세 공적 600만 + ③ 1,200만: 공적만 0원, 합산 1,800만 → 공제 670만 → 과표 880만 × 6% = 52.8만 − 7만 = 45.8만 × 1.1 = 503,800 < 저율 4.4% 528,000
+res = E.simulate({ startAge: 72, eligAge: 55, pre2013: false, b1: 0, b2: 0, retTaxNat: 0, b3: 1e8,
+  r: 0, mode: 'amount', amount: 1.2e7, publicPension: 6e6, publicStartAge: 65, otherIncome: 0 });
+eq('72세 공적 600+③ 1,200 종합 503,800', res.rows[0].taxPension, 503800);
+eq('72세 공적 600+③ 1,200 종합과세 선택', res.rows[0].method === '종합과세 선택' ? 1 : 0, 1, 0);
 // 16) 한도 안/초과 분리 필드: 미래에셋 예시 (② 2,500 인출, 한도 2,400)
 res = E.simulate({ startAge: 57, eligAge: 55, pre2013: false, b1: 0, b2: 1.2e8, retTaxNat: 1.2e7, b3: 0.4e8,
   r: 0, mode: 'amount', amount: 2.5e7, publicPension: 0, otherIncome: 0 });
@@ -141,10 +152,11 @@ eq('일시해지 세금 2,000×10%×1.1 + 3,000×16.5%', L2.sum.tax, 2.2e6 + 4.9
 const P0 = { startAge: 60, eligAge: 55, pre2013: false, b1: 3e7, b2: 2e8, retTaxNat: E.retirementTax(2e8, 25), b3: 1.5e8, r: 0.04, publicPension: 0, publicStartAge: 65, otherIncome: 0 };
 const y20 = E.simulate({ ...P0, mode: 'years', years: 20 });
 const W0 = Math.round(y20.rows[0].w / 1e4) * 1e4;
-eq('회귀 20년 균등 총세금', y20.sum.tax, 20341498);
+// 2026-10-19 경로우대공제 반영: 70세부터 종합과세 해마다 16.5만(15% 구간) 또는 6.6만(6% 구간) 줄어듦
+eq('회귀 20년 균등 총세금', y20.sum.tax, 18691498);          // 20,341,498 − 16.5만 × 10년
 eq('회귀 일시 해지 총세금', E.simulate({ ...P0, mode: 'lump' }).sum.tax, 30332500);
-eq('회귀 1,500 맞춤 총세금', E.simulate({ ...P0, mode: 'cap', phase1Amount: W0, capAmount: 1.5e7 }).sum.tax, 13924878);
-eq('회귀 나눠 받기 총세금', E.simulate({ ...P0, mode: 'split', desired: W0, capAmount: 1.5e7 }).sum.tax, 11443826);
+eq('회귀 1,500 맞춤 총세금', E.simulate({ ...P0, mode: 'cap', phase1Amount: W0, capAmount: 1.5e7 }).sum.tax, 12340878);  // 13,924,878 − 6.6만 × 24년
+eq('회귀 나눠 받기 총세금', E.simulate({ ...P0, mode: 'split', desired: W0, capAmount: 1.5e7 }).sum.tax, 10769642);  // 11,443,826 − 6.6만 × 10년 − 80세 14,184
 // 18) 건보료 (2026) — 손계산
 eq('과세표준 1주택 5억 → 44%', E.houseTaxBase(5e8, false), 2.2e8);
 eq('과세표준 1주택 3억 → 43%', E.houseTaxBase(3e8, false), 1.29e8);
@@ -160,6 +172,13 @@ eq('지역 재산분 490×211.5 = 103,635', nh.propPrem, 103635);
 eq('지역 장기요양 = 건보료×0.9448/7.19', Math.round(nh.ltc), Math.round(168345 * 0.009448 / 0.0719));
 nh = E.nhRegional({ pub: [0], fin: [0], other: 0, taxBase: 0 });
 eq('소득·재산 0 → 하한 20,160', nh.health, 20160);
+// 소득월액이 28만원을 조금 넘어도(28만~28.04만) 하한 보험료 아래로 내려가지 않음: 공적연금 672.5만 → 반영 336.25만 ÷ 12 = 280,208 × 7.19% = 20,147
+nh = E.nhRegional({ pub: [6.725e6], fin: [0], other: 0, taxBase: 0 });
+eq('소득월액 280,208 → 하한 20,160 (20,147 아님)', nh.incPrem, 20160, 0);
+eq('소득월액 280,208 → 하한 표시', nh.floor ? 1 : 0, 1, 0);
+nh = E.nhRegional({ pub: [6.73e6], fin: [0], other: 0, taxBase: 0 });   // 280,417 × 7.19% = 20,162
+eq('소득월액 280,417 → 소득 × 요율 20,162', nh.incPrem, 280416.67 * 0.0719);
+eq('소득월액 280,417 → 하한 아님', nh.floor ? 1 : 0, 0, 0);
 nh = E.nhRegional({ pub: [0], fin: [1e7], other: 0, taxBase: 0 });
 eq('금융소득 1,000만 이하 → 소득 0', nh.income, 0);
 nh = E.nhRegional({ pub: [0, 0], fin: [1.2e7, 1e7], other: 0, taxBase: 0 });
