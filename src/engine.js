@@ -84,6 +84,7 @@ function simulate(p) {
   const sum = {
     withdrawn: 0, tax: 0, net: 0,
     taxRetire: 0, taxPensionLow: 0, taxPensionHigh: 0, taxOther: 0,
+    taxRetireOver: 0,                        // taxRetire 중 한도 초과(연금외수령) 퇴직금에 붙은 몫 (감면 없음)
     from1: 0, from2: 0, from3: 0,
     pen2: 0, over2: 0, pen3: 0, over3: 0,   // 연금수령분(한도 안) vs 연금외수령분(한도 초과)
     overYears: 0, overAmount: 0,
@@ -103,7 +104,7 @@ function simulate(p) {
       method: '전액 연금외수령', p3: 0, endBal: 0, pen2: 0, over2: b2, over3: b3,
     });
     Object.assign(sum, {
-      withdrawn: total0, tax, net: total0 - tax, taxRetire: tRet, taxOther: tOth,
+      withdrawn: total0, tax, net: total0 - tax, taxRetire: tRet, taxRetireOver: tRet, taxOther: tOth,
       from1: b1, from2: b2, from3: b3, over2: b2, over3: b3, overYears: 1, overAmount: total0,
     });
     sum.effRate = total0 > 0 ? tax / total0 : 0;
@@ -179,7 +180,8 @@ function simulate(p) {
     // split 모드는 ② 계좌가 따로 있으므로 ②를 실제로 받은 해만 센다 (retire-drawdown과 같은 방식)
     if (p.mode === 'split' && pen.b2 > 0.5) n2++;   // 0.5원 미만 소수점 찌꺼기는 받은 해로 안 셈
     const nRet = p.mode === 'split' ? n2 : n;
-    const tRet = pen.b2 * retRate * retireFactor(nRet) * RULE.LOCAL + out.b2 * retRate * RULE.LOCAL;
+    const tRetOver = out.b2 * retRate * RULE.LOCAL;   // 한도 초과분은 감면 없이 100%
+    const tRet = pen.b2 * retRate * retireFactor(nRet) * RULE.LOCAL + tRetOver;
     const p3 = pen.b3; // 1,500만원 판정 대상 (세액공제 받은 원금+수익의 연금수령분)
     let tPen = 0, method = '-';
     let lowFlag = false, highFlag = false;
@@ -227,7 +229,7 @@ function simulate(p) {
     });
 
     sum.withdrawn += w; sum.tax += tax; sum.net += w - tax;
-    sum.taxRetire += tRet; sum.taxOther += tOth;
+    sum.taxRetire += tRet; sum.taxRetireOver += tRetOver; sum.taxOther += tOth;
     if (lowFlag) { sum.taxPensionLow += tPen; sum.lowYears++; }
     if (highFlag) { sum.taxPensionHigh += tPen; sum.highYears++; }
     sum.from1 += take.b1; sum.from2 += take.b2; sum.from3 += take.b3;
