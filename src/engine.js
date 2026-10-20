@@ -114,7 +114,7 @@ function simulate(p) {
     const tOth = b3 * RULE.OTHER_RATE * RULE.LOCAL;
     const tax = tRet + tOth;
     rows.push({
-      n: 1, age: p.startAge, limitYear: null, startBal: total0, limit: 0,
+      n: 1, nRet: 1, age: p.startAge, limitYear: null, startBal: total0, limit: 0,
       w: total0, from1: b1, from2: b2, from3: b3, over: total0,
       taxRetire: tRet, taxPension: 0, taxOther: tOth, tax, net: total0 - tax,
       method: '전액 연금외수령', p3: 0, endBal: 0, pen2: 0, over2: b2, over3: b3,
@@ -134,6 +134,7 @@ function simulate(p) {
   const fixedPay = p.mode === 'years' ? levelPayment(total0, r, plannedYears) : p.amount;
   const MAX_YEARS = 60;
   const MAX_AGE = p.maxAge || 100;
+  let n2 = 0;   // split 모드: ②(퇴직금 IRP)에서 연금으로 실제로 받은 햇수 (감면 연차)
 
   for (let i = 0; i < MAX_YEARS; i++) {
     const startBal = b1 + b2 + b3;
@@ -191,7 +192,11 @@ function simulate(p) {
     b1 -= take.b1; b2 -= take.b2; b3 -= take.b3;
 
     // 세금
-    const tRet = pen.b2 * retRate * retireFactor(n) * RULE.LOCAL + out.b2 * retRate * RULE.LOCAL;
+    // 퇴직소득세 감면 연차 = 연금 실제 수령연차 (소득세법 제129조①5의2). 한 계좌 모드는 계좌에서 받은 해 = n,
+    // split 모드는 ② 계좌가 따로 있으므로 ②를 실제로 받은 해만 센다 (retire-drawdown과 같은 방식)
+    if (p.mode === 'split' && pen.b2 > 0.5) n2++;   // 0.5원 미만 소수점 찌꺼기는 받은 해로 안 셈
+    const nRet = p.mode === 'split' ? n2 : n;
+    const tRet = pen.b2 * retRate * retireFactor(nRet) * RULE.LOCAL + out.b2 * retRate * RULE.LOCAL;
     const p3 = pen.b3; // 1,500만원 판정 대상 (세액공제 받은 원금+수익의 연금수령분)
     let tPen = 0, method = '-';
     let lowFlag = false, highFlag = false;
@@ -231,7 +236,7 @@ function simulate(p) {
     }
 
     rows.push({
-      n, age, limitYear, startBal, limit, w,
+      n, nRet, age, limitYear, startBal, limit, w,
       from1: take.b1, from2: take.b2, from3: take.b3, over,
       taxRetire: tRet, taxPension: tPen, taxOther: tOth, tax, net: w - tax,
       method, p3, endBal: b1 + b2 + b3,
@@ -264,6 +269,7 @@ const NH = {
   perPoint: TTOKJAE_RULES.NHIS.perPoint, propDed: TTOKJAE_RULES.NHIS.propertyDeduction,  // 재산 부과점수당 금액 · 재산 기본공제
   finMin: TTOKJAE_RULES.NHIS.finIncomeThreshold,     // 이자·배당 1인 연 1,000만원 이하면 건보료 소득 제외(넘으면 전액)
   pubRate: TTOKJAE_RULES.NHIS.publicPensionRatio,    // 지역가입자 공적연금 반영 비율
+  trunc: TTOKJAE_RULES.NHIS.truncUnit,               // 보험료 10원 미만 버림 (고지서처럼, fin-income-tax·etf-vs-direct와 같은 방식)
   depIncome: TTOKJAE_RULES.NHIS.dependent.income, depBiz: TTOKJAE_RULES.NHIS.dependent.biz,
   depProp1: TTOKJAE_RULES.NHIS.dependent.propLow, depProp2: TTOKJAE_RULES.NHIS.dependent.propHigh,
   depPropIncome: TTOKJAE_RULES.NHIS.dependent.propIncome,
@@ -291,18 +297,22 @@ function propPoints(taxBase) {
 const nhFin = f => (f > NH.finMin ? f : 0);
 
 /* 지역가입자 월 보험료 (세대 합산)
-   o = { pub: [공적연금 연액…], fin: [이자·배당 연액…], other: 임대·사업 등 소득금액(연, 세대 합계), taxBase: 주택 과세표준 } */
+   o = { pub: [공적연금 연액…], fin: [이자·배당 연액…], other: 임대·사업 등 소득금액(연, 세대 합계), taxBase: 주택 과세표준 }
+   고지서처럼 10원 미만 버림: 소득 보험료·재산 보험료를 각각 버리고, 장기요양보험료는 버림한 건강보험료 × 장기요양/건강 요율을 다시 버림
+   (fin-income-tax·etf-vs-direct의 floor10과 같은 방식) */
 function nhRegional(o) {
+  const floor10 = v => Math.floor(v / NH.trunc + 1e-9) * NH.trunc;
   const pubs = o.pub || [], fins = o.fin || [];
   const income = pubs.reduce((a, v) => a + Math.max(0, v) * NH.pubRate, 0)
                + fins.reduce((a, v) => a + nhFin(Math.max(0, v)), 0) + Math.max(0, o.other || 0);
   const m = income / 12;
-  const incPrem = Math.max(NH.floorPrem, Math.min(NH.capPremM, m * NH.hi));   // 하한 보험료 아래로 내려가지 않게 (소득월액 28만~28.04만 구간 포함)
+  const incRaw = Math.max(NH.floorPrem, Math.min(NH.capPremM, m * NH.hi));   // 하한 보험료 아래로 내려가지 않게 (소득월액 28만~28.04만 구간 포함)
+  const incPrem = floor10(incRaw);
   const pts = propPoints(o.taxBase || 0);
-  const propPrem = pts * NH.perPoint;
+  const propPrem = floor10(pts * NH.perPoint);
   const health = incPrem + propPrem;
-  const ltc = health * NH.ltc / NH.hi;
-  return { income, m, incPrem, pts, propPrem, health, ltc, total: health + ltc, floor: incPrem <= NH.floorPrem };
+  const ltc = floor10(health * NH.ltc / NH.hi);
+  return { income, m, incPrem, pts, propPrem, health, ltc, total: health + ltc, floor: incRaw <= NH.floorPrem };
 }
 
 /* 피부양자 요건 (가족 중 직장가입자가 있을 때)

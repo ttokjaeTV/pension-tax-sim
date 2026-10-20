@@ -172,7 +172,15 @@ const W0 = Math.round(y20.rows[0].w / 1e4) * 1e4;
 eq('회귀 20년 균등 총세금', y20.sum.tax, 18691498);          // 20,341,498 − 16.5만 × 10년
 eq('회귀 일시 해지 총세금', E.simulate({ ...P0, mode: 'lump' }).sum.tax, 30332500);
 eq('회귀 1,500 맞춤 총세금', E.simulate({ ...P0, mode: 'cap', phase1Amount: W0, capAmount: 1.5e7 }).sum.tax, 12340878);  // 13,924,878 − 6.6만 × 24년
-eq('회귀 나눠 받기 총세금', E.simulate({ ...P0, mode: 'split', desired: W0, capAmount: 1.5e7 }).sum.tax, 10769642);  // 11,443,826 − 6.6만 × 10년 − 80세 14,184
+// 2026-10-20 split 감면 연차를 ②를 실제로 받은 해만 셈(소득세법 129조①5의2): ②는 3~20년차(62~79세)에 받아 감면 연차 1~18년.
+//   예전(인출 연차 n)엔 11·12년차(70·71세)가 60%였는데 이제 ② 9·10년차라 70% → ②연 1,189만 × 퇴직세율 2.5375% × 10%p × 1.1 × 2년 = 66,376 늘어남
+eq('회귀 나눠 받기 총세금', E.simulate({ ...P0, mode: 'split', desired: W0, capAmount: 1.5e7 }).sum.tax, 10836018);  // 10,769,642 + 66,376
+// split 감면 연차 = ②를 받은 해만 (②를 늦게 꺼내도 첫 해가 1년차)
+{ const s = E.simulate({ startAge: 60, eligAge: 60, pre2013: false, b1: 0, b2: 1e8, retTaxNat: 1e7, b3: 1.5e8, r: 0, mode: 'split', desired: 1.5e7, capAmount: 1.5e7, publicPension: 0, otherIncome: 0 });
+  const r2 = s.rows.find(r => r.pen2 > 0.5);   // ③ 1.5억을 10년 쓰고 11년차(70세)에 ② 시작
+  eq('split ② 첫 해 = 11년차', r2.n, 11, 0);
+  eq('split ② 첫 해 감면 연차 1', r2.nRet, 1, 0);
+  eq('split ② 첫 해 퇴직세 1,500만×10%×70%×1.1', r2.taxRetire, 1.5e7 * 0.1 * 0.7 * 1.1); }
 // 18) 건보료 (2026) — 손계산
 eq('과세표준 1주택 5억 → 44%', E.houseTaxBase(5e8, false), 2.2e8);
 eq('과세표준 1주택 3억 → 43%', E.houseTaxBase(3e8, false), 1.29e8);
@@ -184,16 +192,18 @@ eq('재산 공제 후 450만 → 22점', E.propPoints(1.045e8), 22);
 eq('재산 공제 후 451만 → 44점', E.propPoints(1.0451e8), 44);
 let nh = E.nhRegional({ pub: [2.16e7], fin: [0], other: 0, taxBase: 2.2e8 });
 eq('지역 소득분 1,080만÷12×7.19% = 64,710', nh.incPrem, 64710);
-eq('지역 재산분 490×211.5 = 103,635', nh.propPrem, 103635);
-eq('지역 장기요양 = 건보료×0.9448/7.19', Math.round(nh.ltc), Math.round(168345 * 0.009448 / 0.0719));
+// 2026-10-20 고지서처럼 10원 미만 버림 (fin-income-tax·etf-vs-direct와 같은 방식)
+eq('지역 재산분 490×211.5 = 103,635 → 103,630', nh.propPrem, 103630, 0);
+eq('지역 건강보험료 64,710 + 103,630', nh.health, 168340, 0);
+eq('지역 장기요양 168,340×0.9448/7.19 = 22,120.7 → 22,120', nh.ltc, 22120, 0);
 nh = E.nhRegional({ pub: [0], fin: [0], other: 0, taxBase: 0 });
 eq('소득·재산 0 → 하한 20,160', nh.health, 20160);
 // 소득월액이 28만원을 조금 넘어도(28만~28.04만) 하한 보험료 아래로 내려가지 않음: 공적연금 672.5만 → 반영 336.25만 ÷ 12 = 280,208 × 7.19% = 20,147
 nh = E.nhRegional({ pub: [6.725e6], fin: [0], other: 0, taxBase: 0 });
 eq('소득월액 280,208 → 하한 20,160 (20,147 아님)', nh.incPrem, 20160, 0);
 eq('소득월액 280,208 → 하한 표시', nh.floor ? 1 : 0, 1, 0);
-nh = E.nhRegional({ pub: [6.73e6], fin: [0], other: 0, taxBase: 0 });   // 280,417 × 7.19% = 20,162
-eq('소득월액 280,417 → 소득 × 요율 20,162', nh.incPrem, 280416.67 * 0.0719);
+nh = E.nhRegional({ pub: [6.73e6], fin: [0], other: 0, taxBase: 0 });   // 280,417 × 7.19% = 20,161.96 → 10원 미만 버림 20,160
+eq('소득월액 280,417 → 소득 × 요율 20,161.96 → 20,160', nh.incPrem, 20160, 0);
 eq('소득월액 280,417 → 하한 아님', nh.floor ? 1 : 0, 0, 0);
 nh = E.nhRegional({ pub: [0], fin: [1e7], other: 0, taxBase: 0 });
 eq('금융소득 1,000만 이하 → 소득 0', nh.income, 0);

@@ -1051,7 +1051,7 @@
         <div class="how-d">세액공제 한도를 넘겨 넣을 돈은 <b>별도 연금저축 계좌</b>에, 퇴직금은 <b>새 IRP</b>에 받으세요. 돈의 종류별로 계좌가 나뉘어 있으면, 나중에 계좌마다 얼마씩 꺼낼지 마음대로 짤 수 있어요.</div>
       </div>
     </div>
-    <div class="split-warn">이 계산은 계좌를 하나로 합쳐 본 근사치예요. <b>수령한도와 퇴직금 감면 연차는 계좌마다 따로 계산</b>되고, 퇴직금 IRP도 매년 조금이라도 받아야 감면 연차가 쌓여요. 개시 전에 금융회사에서 계좌별 <span class="bn n1">1</span>·<span class="bn n2">2</span>·<span class="bn n3">3</span> 금액과 인출 가능 금액을 꼭 확인하세요.</div>
+    <div class="split-warn">이 계산은 수령한도를 계좌를 하나로 합쳐 본 근사치예요. <b>수령한도는 계좌마다 따로 계산</b>되고, 퇴직금 감면 연차는 <span class="bn n2">2</span>를 실제로 받은 해만 세어 계산했어요(퇴직금 IRP도 매년 조금이라도 받아야 감면 연차가 쌓여요). 개시 전에 금융회사에서 계좌별 <span class="bn n1">1</span>·<span class="bn n2">2</span>·<span class="bn n3">3</span> 금액과 인출 가능 금액을 꼭 확인하세요.</div>
     <div class="cap-actions">
       <button type="button" class="btn-fill" id="apply-split">이 설계로 전체 계산하기</button>
       <span class="cap-note" id="split-note"></span>
@@ -1514,7 +1514,7 @@ function simulate(p) {
     const tOth = b3 * RULE.OTHER_RATE * RULE.LOCAL;
     const tax = tRet + tOth;
     rows.push({
-      n: 1, age: p.startAge, limitYear: null, startBal: total0, limit: 0,
+      n: 1, nRet: 1, age: p.startAge, limitYear: null, startBal: total0, limit: 0,
       w: total0, from1: b1, from2: b2, from3: b3, over: total0,
       taxRetire: tRet, taxPension: 0, taxOther: tOth, tax, net: total0 - tax,
       method: '전액 연금외수령', p3: 0, endBal: 0, pen2: 0, over2: b2, over3: b3,
@@ -1534,6 +1534,7 @@ function simulate(p) {
   const fixedPay = p.mode === 'years' ? levelPayment(total0, r, plannedYears) : p.amount;
   const MAX_YEARS = 60;
   const MAX_AGE = p.maxAge || 100;
+  let n2 = 0;   // split 모드: ②(퇴직금 IRP)에서 연금으로 실제로 받은 햇수 (감면 연차)
 
   for (let i = 0; i < MAX_YEARS; i++) {
     const startBal = b1 + b2 + b3;
@@ -1591,7 +1592,11 @@ function simulate(p) {
     b1 -= take.b1; b2 -= take.b2; b3 -= take.b3;
 
     // 세금
-    const tRet = pen.b2 * retRate * retireFactor(n) * RULE.LOCAL + out.b2 * retRate * RULE.LOCAL;
+    // 퇴직소득세 감면 연차 = 연금 실제 수령연차 (소득세법 제129조①5의2). 한 계좌 모드는 계좌에서 받은 해 = n,
+    // split 모드는 ② 계좌가 따로 있으므로 ②를 실제로 받은 해만 센다 (retire-drawdown과 같은 방식)
+    if (p.mode === 'split' && pen.b2 > 0.5) n2++;   // 0.5원 미만 소수점 찌꺼기는 받은 해로 안 셈
+    const nRet = p.mode === 'split' ? n2 : n;
+    const tRet = pen.b2 * retRate * retireFactor(nRet) * RULE.LOCAL + out.b2 * retRate * RULE.LOCAL;
     const p3 = pen.b3; // 1,500만원 판정 대상 (세액공제 받은 원금+수익의 연금수령분)
     let tPen = 0, method = '-';
     let lowFlag = false, highFlag = false;
@@ -1631,7 +1636,7 @@ function simulate(p) {
     }
 
     rows.push({
-      n, age, limitYear, startBal, limit, w,
+      n, nRet, age, limitYear, startBal, limit, w,
       from1: take.b1, from2: take.b2, from3: take.b3, over,
       taxRetire: tRet, taxPension: tPen, taxOther: tOth, tax, net: w - tax,
       method, p3, endBal: b1 + b2 + b3,
@@ -1664,6 +1669,7 @@ const NH = {
   perPoint: TTOKJAE_RULES.NHIS.perPoint, propDed: TTOKJAE_RULES.NHIS.propertyDeduction,  // 재산 부과점수당 금액 · 재산 기본공제
   finMin: TTOKJAE_RULES.NHIS.finIncomeThreshold,     // 이자·배당 1인 연 1,000만원 이하면 건보료 소득 제외(넘으면 전액)
   pubRate: TTOKJAE_RULES.NHIS.publicPensionRatio,    // 지역가입자 공적연금 반영 비율
+  trunc: TTOKJAE_RULES.NHIS.truncUnit,               // 보험료 10원 미만 버림 (고지서처럼, fin-income-tax·etf-vs-direct와 같은 방식)
   depIncome: TTOKJAE_RULES.NHIS.dependent.income, depBiz: TTOKJAE_RULES.NHIS.dependent.biz,
   depProp1: TTOKJAE_RULES.NHIS.dependent.propLow, depProp2: TTOKJAE_RULES.NHIS.dependent.propHigh,
   depPropIncome: TTOKJAE_RULES.NHIS.dependent.propIncome,
@@ -1691,18 +1697,22 @@ function propPoints(taxBase) {
 const nhFin = f => (f > NH.finMin ? f : 0);
 
 /* 지역가입자 월 보험료 (세대 합산)
-   o = { pub: [공적연금 연액…], fin: [이자·배당 연액…], other: 임대·사업 등 소득금액(연, 세대 합계), taxBase: 주택 과세표준 } */
+   o = { pub: [공적연금 연액…], fin: [이자·배당 연액…], other: 임대·사업 등 소득금액(연, 세대 합계), taxBase: 주택 과세표준 }
+   고지서처럼 10원 미만 버림: 소득 보험료·재산 보험료를 각각 버리고, 장기요양보험료는 버림한 건강보험료 × 장기요양/건강 요율을 다시 버림
+   (fin-income-tax·etf-vs-direct의 floor10과 같은 방식) */
 function nhRegional(o) {
+  const floor10 = v => Math.floor(v / NH.trunc + 1e-9) * NH.trunc;
   const pubs = o.pub || [], fins = o.fin || [];
   const income = pubs.reduce((a, v) => a + Math.max(0, v) * NH.pubRate, 0)
                + fins.reduce((a, v) => a + nhFin(Math.max(0, v)), 0) + Math.max(0, o.other || 0);
   const m = income / 12;
-  const incPrem = Math.max(NH.floorPrem, Math.min(NH.capPremM, m * NH.hi));   // 하한 보험료 아래로 내려가지 않게 (소득월액 28만~28.04만 구간 포함)
+  const incRaw = Math.max(NH.floorPrem, Math.min(NH.capPremM, m * NH.hi));   // 하한 보험료 아래로 내려가지 않게 (소득월액 28만~28.04만 구간 포함)
+  const incPrem = floor10(incRaw);
   const pts = propPoints(o.taxBase || 0);
-  const propPrem = pts * NH.perPoint;
+  const propPrem = floor10(pts * NH.perPoint);
   const health = incPrem + propPrem;
-  const ltc = health * NH.ltc / NH.hi;
-  return { income, m, incPrem, pts, propPrem, health, ltc, total: health + ltc, floor: incPrem <= NH.floorPrem };
+  const ltc = floor10(health * NH.ltc / NH.hi);
+  return { income, m, incPrem, pts, propPrem, health, ltc, total: health + ltc, floor: incRaw <= NH.floorPrem };
 }
 
 /* 피부양자 요건 (가족 중 직장가입자가 있을 때)
@@ -1928,7 +1938,8 @@ function render() {
   } else if (S.over3 > 0.5) al.push(['warn', `<b><span class="bn n3">3</span> ${fmtShort(S.over3)}원을 모두 수령한도 밖에서 꺼내</b> 저율 연금소득세가 아니라 기타소득세 ${T_OTHR}가 붙어요.`]);
   if (p.b2 > 0) {
     // 감면은 한도 안에서 연금으로 받은 퇴직금(pen2)에만 적용. 한도 초과분(over2)은 감면 0%
-    const n = rows.filter(r => r.pen2 > 0.5).map(r => r.n);
+    // 감면 연차(nRet): 한 계좌면 인출 연차, 계좌 나누기면 ②를 실제로 받은 해만 센 연차
+    const n = rows.filter(r => r.pen2 > 0.5).map(r => r.nRet);
     const lastN = n.length ? Math.max(...n) : 0;
     const overTxt = S.over2 > 0.5 ? ` 단, 수령한도를 넘겨 꺼낸 퇴직금 <b>${fmtShort(S.over2)}원은 감면 없이</b> 퇴직소득세 100%를 냅니다.` : '';
     if (lastN && lastN <= PPR[0][0]) al.push(['info', `한도 안에서 연금으로 받는 퇴직금은 ${lastN}년차 안에 모두 받아 <b>${T_CUT[0]} 감면</b>만 적용돼요. ${PPR[0][0] + 1}년차 이후로 일부를 넘기면 ${T_CUT[1]}, ${PPR[1][0] + 1}년차 이후는 ${T_CUT[2]} 감면입니다.${overTxt}`]);
@@ -1959,7 +1970,7 @@ function render() {
   // 연도별 표
   $('yr-table').querySelector('tbody').innerHTML = rows.map(r => {
     const m = r.method === '-' ? '-' : `<span class="pill ${r.p3 > RULE.SEP_LIMIT ? 'high' : 'low'}">${r.method}</span>`;
-    const hl = (r.n === PPR[0][0] + 1 || r.n === PPR[1][0] + 1) && r.from2 > 0 ? 'hl-year' : '';   // 퇴직소득세 감면율이 바뀌는 해 (11·21년차)
+    const hl = (r.nRet === PPR[0][0] + 1 || r.nRet === PPR[1][0] + 1) && r.from2 > 0 ? 'hl-year' : '';   // 퇴직소득세 감면율이 바뀌는 해 (감면 연차 11·21년차)
     return `<tr class="${hl}"><td>${r.n}년차</td><td>${r.age}세</td><td>${fmtT(r.startBal)}</td><td>${r.limit === Infinity ? '제한 없음' : fmtT(r.limit)}</td><td><b>${fmtT(r.w)}</b></td>
       <td class="c1">${fmtT(r.from1)}</td><td class="c2">${fmtT(r.from2)}</td><td class="c3">${fmtT(r.from3)}</td><td class="${r.over > 0.5 ? 'over' : ''}">${fmtT(r.over)}</td>
       <td>${fmtT(r.taxRetire)}</td><td>${fmtT(r.taxPension)}</td><td>${fmtT(r.taxOther)}</td><td class="tax">${fmtT(r.tax)}</td><td class="method">${m}</td><td><b>${fmtT(r.net)}</b></td></tr>`;
@@ -2073,7 +2084,7 @@ function renderNh(p, mine) {
       <ul style="margin-top:6px;">${li.map(x => `<li>${x}</li>`).join('')}</ul>
       <div class="nh-s" style="margin-top:6px;">피부양자는 보험료가 0원이에요. 부양 관계·소득 종류별 세부 요건이 더 있으니, 정확한 판정은 국민건강보험공단(1577-1000)에서 확인하세요.</div></div>`;
   }
-  h += `<div class="nh-box wide" style="background:transparent; padding:4px 2px;"><div class="nh-s" style="color:var(--ink-mute); font-size:12.5px;">2026년 기준 추정입니다: 건강보험료율 ${pctNum(NH.hi)}%, 장기요양 ${pctNum(NH.ltc)}%(소득 대비), 지역가입자 공적연금 ${pctNum(NH.pubRate)}% 반영, 이자·배당은 1인 연 ${comma3(NH.finMin / 1e4)}만원 넘으면 전액, 재산은 주택 과세표준에서 ${NH.propDed / 1e8}억원 공제 후 등급 점수 × ${NH.perPoint}원. 전월세 보증금·토지·세대원 근로소득은 넣지 않았고, 실제 보험료는 전년도 소득 자료로 매겨져요.</div></div>`;
+  h += `<div class="nh-box wide" style="background:transparent; padding:4px 2px;"><div class="nh-s" style="color:var(--ink-mute); font-size:12.5px;">2026년 기준 추정입니다: 건강보험료율 ${pctNum(NH.hi)}%, 장기요양 ${pctNum(NH.ltc)}%(소득 대비), 지역가입자 공적연금 ${pctNum(NH.pubRate)}% 반영, 이자·배당은 1인 연 ${comma3(NH.finMin / 1e4)}만원 넘으면 전액, 재산은 주택 과세표준에서 ${NH.propDed / 1e8}억원 공제 후 등급 점수 × ${NH.perPoint}원. 건강보험료·장기요양보험료는 고지서처럼 각각 ${comma3(NH.trunc)}원 미만을 버렸어요. 전월세 보증금·토지·세대원 근로소득은 넣지 않았고, 실제 보험료는 전년도 소득 자료로 매겨져요.<br>국내 주식을 직접 보유해 받은 배당이 금융소득종합과세(연 ${comma3(TR.FIN_INCOME.threshold / 1e4)}만원 초과) 대상이 되면 배당가산액(그로스업 ${pctNum(TR.FIN_INCOME.grossUp)}%)만큼 건보료 소득이 늘 수 있어요(ETF 분배금은 해당 없음). 정확한 계산은 <a href="https://ttokjaetv.github.io/fin-income-tax/" target="_blank" rel="noopener">금융소득종합과세 계산기 ↗</a>에서 하세요.</div></div>`;
   $('nh-out').innerHTML = h;
 }
 
