@@ -1,6 +1,6 @@
 /* ===== 연금인출 세금 엔진 (2026년 세법 기준) ===== */
 /* 제도 숫자(세율·한도·구간표·건보료 요율)는 공용 기준 파일 rules.js의 전역 TTOKJAE_RULES에서 읽는다.
-   → 이 파일보다 먼저 <script src="https://ttokjaetv.github.io/rules/v2026.1/rules.js"> 를 불러야 함 (Node 테스트는 global.TTOKJAE_RULES). */
+   → 이 파일보다 먼저 <script src="https://ttokjaetv.github.io/rules/v2026.2/rules.js"> 를 불러야 함 (Node 테스트는 global.TTOKJAE_RULES). */
 /* 주의: 은퇴 5년 전 점검 가이드(ttokjaeTV/retire-check)가 이 파일(src/engine.js)을 직접 불러 4단계 세금을 계산합니다.
    simulate · retirementTax 함수 이름과 입력·출력 형식을 바꾸면 가이드도 같이 확인하세요. */
 const RULE = {

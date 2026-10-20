@@ -1309,11 +1309,14 @@
 </div>
 
 <!-- 공용 제도 상수(세율·한도·건보료 요율). 아래 엔진·화면 스크립트보다 먼저 불러야 함 -->
-<script src="https://ttokjaetv.github.io/rules/v2026.1/rules.js"></script>
+<script src="https://ttokjaetv.github.io/rules/v2026.2/rules.js"></script>
 <script src="https://ttokjaetv.github.io/rules/fill-v1.js"></script>
+<!-- 공용 계산 엔진 (세액·공제·건보료 계산 — rules.js 다음, 이 계산기 엔진보다 먼저) -->
+<script src="https://ttokjaetv.github.io/rules/calc-v1.js"></script>
 <script>
-if (!window.TTOKJAE_RULES) {
-  var TJR_MSG = '기준값 파일(rules.js)을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로고침해 주세요.';
+if (!window.TTOKJAE_RULES || !window.TTOKJAE_CALC) {
+  var TJR_MSG = !window.TTOKJAE_RULES ? '기준값 파일(rules.js)을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로고침해 주세요.'
+    : '계산 엔진 파일(calc-v1.js)을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로고침해 주세요.';
   var tjrShow = function () { document.body.insertAdjacentHTML('afterbegin', '<div role="alert" style="background:#fdecea;color:#b3261e;padding:12px 16px;text-align:center;font-weight:600">' + TJR_MSG + '</div>'); };
   document.body ? tjrShow() : document.addEventListener('DOMContentLoaded', tjrShow);
   throw new Error(TJR_MSG);
