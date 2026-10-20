@@ -1,18 +1,23 @@
-// 공용 제도 상수(rules.js)를 브라우저처럼 전역 TTOKJAE_RULES로 둔다. 버전은 페이지의 <script src>에서 읽음.
+// 공용 제도 상수(rules.js)·공용 계산 엔진(calc-v1.js)을 브라우저처럼 전역 TTOKJAE_RULES·TTOKJAE_CALC로 둔다. 버전은 페이지의 <script src>에서 읽음.
+// 허브 clone(위쪽 폴더의 ttokjaetv.github.io — 자동 검사에서는 저장소 안에 받아 둠)을 먼저 찾고, 없으면 고정 주소에서 받는다.
 (function loadRules() {
   const fs = require('fs'), path = require('path');
   const html = ['template.html', '../src/template.html', '../index.html', 'index.html'].map(f => path.join(__dirname, f)).find(f => fs.existsSync(f) && /rules\/v[\d.]+\/rules\.js/.test(fs.readFileSync(f, 'utf8')));
-  const rel = fs.readFileSync(html, 'utf8').match(/rules\/v[\d.]+\/rules\.js/)[0];
-  let src = null;
-  for (let d = __dirname, i = 0; i < 6 && src === null; i++, d = path.dirname(d)) {
-    const f = path.join(d, 'ttokjaetv.github.io', rel);
-    if (fs.existsSync(f)) src = fs.readFileSync(f, 'utf8');
-  }
-  if (src === null) src = require('child_process').execFileSync(process.execPath, ['-e',
-    `fetch('https://ttokjaetv.github.io/${rel}').then(r => { if (!r.ok) throw new Error(r.status); return r.text(); }).then(t => process.stdout.write(t))`]).toString();
-  const m = { exports: {} };
-  new Function('module', 'exports', src)(m, m.exports);
-  global.TTOKJAE_RULES = m.exports;
+  const page = fs.readFileSync(html, 'utf8');
+  const load = rel => {
+    let src = null;
+    for (let d = __dirname, i = 0; i < 6 && src === null; i++, d = path.dirname(d)) {
+      const f = path.join(d, 'ttokjaetv.github.io', rel);
+      if (fs.existsSync(f)) src = fs.readFileSync(f, 'utf8');
+    }
+    if (src === null) src = require('child_process').execFileSync(process.execPath, ['-e',
+      `fetch('https://ttokjaetv.github.io/${rel}').then(r => { if (!r.ok) throw new Error(r.status); return r.text(); }).then(t => process.stdout.write(t))`]).toString();
+    const m = { exports: {} };
+    new Function('module', 'exports', src)(m, m.exports);
+    return m.exports;
+  };
+  global.TTOKJAE_RULES = load(page.match(/rules\/v[\d.]+\/rules\.js/)[0]);
+  global.TTOKJAE_CALC = load(page.match(/rules\/calc-v\d+\.js/)[0]);
 })();
 const E = require('./engine.js');
 let fail = 0;

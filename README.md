@@ -25,6 +25,11 @@ cd .. && python src/build.py  # index.html 다시 만들기
 # 2) GitHub Desktop에서 Commit → Push
 ```
 
+제도 숫자는 허브의 `rules/v2026.2/rules.js`(전역 `TTOKJAE_RULES`), 세금·건보료 계산식(누진세·연금소득공제·종합과세·퇴직소득세·연금세율·감면 비율·재산 점수·건보료·피부양자)은
+허브의 공용 계산 엔진 `rules/calc-v1.js`(전역 `TTOKJAE_CALC`)에서 온다. `src/engine.js`의 `comprehensiveTax`·`nhRegional` 등은 엔진을 부르는 얇은 껍데기(이름·인자·결과 그대로), `simulate`(인출 흐름)는 이 저장소에 있다.
+`src/test.js`는 두 파일을 위쪽 폴더의 허브 clone(`ttokjaetv.github.io`)에서 읽고, 없으면 고정 주소에서 받는다.
+**retire-check가 `src/engine.js`를 실시간으로 불러 쓰므로** 엔진에 새 최상위 이름을 만들 때는 retire-check 전역과 겹치지 않게 한다(지금 새 이름은 `PTS_CALC` 하나).
+
 ## 계산 규칙 (2026년 기준)
 
 | 항목 | 규칙 |
