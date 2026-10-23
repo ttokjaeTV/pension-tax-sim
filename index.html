@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="https://ttokjaetv.github.io/member-lock.js"></script>
+<script src="https://ttokjaetv.github.io/profile-v1.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>연금 인출 세금 시뮬레이터 · 똑재TV</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -460,6 +461,8 @@
       <a href="https://cafe.naver.com/ttokjae" target="_blank" rel="noopener" class="top-cta-link"><span class="naver-mark">N</span>평생 ETF 투자 카페</a>
     </div>
   </div>
+
+  <div id="tj-profile"></div>
 
   <!-- STEP 01 -->
   <div class="card">
@@ -2502,6 +2505,10 @@ const GUIDE_URL = 'https://ttokjaetv.github.io/retire-check/';
 let rz = null;
 window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(render, 200); });
 render();
+/* 내 정보(다른 노후 계산기와 같이 쓰는 값) 채우기·저장 — 허브 profile-v1.js */
+if (window.TJProfile) TJProfile.attach({ map: {
+  'b1': 'noded', 'b2': 'sev', 'ret-years': 'svcYears', 'b3': 'tc', 'start-age': 'wAge',
+  'nps-month': 'nps', 'pub-start': 'npsAge', 'nh-pub': 'nps' } });
 </script>
 </body>
 </html>
