@@ -1306,6 +1306,9 @@
     </div>
     <h3 class="insight-title" id="ins-title">-</h3>
     <div class="insight-desc" id="ins-desc"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;">
+      <a class="cta-link secondary" id="cal-link" href="https://ttokjaetv.github.io/retire-calendar/" target="_blank" rel="noopener">국민연금·배당과 합쳐 노후 월급 달력으로 →</a>
+    </div>
     <div class="insight-cta">
       <div class="insight-cta-text">📊 연금 받는 순서까지 설계하고 싶다면?</div>
       <a href="https://www.youtube.com/@ttok_jae" target="_blank" rel="noopener" class="cta-link primary">
@@ -1880,6 +1883,8 @@ function render() {
   const lump = list.find(s => s.key === 'lump');
   const S = mine.res.sum, rows = mine.res.rows;
   const lastAge = rows.length ? rows[rows.length - 1].age : p.startAge;
+  // 노후 월급 달력으로: 첫해 인출액을 매달 나눠(만원), 받기 시작하는 나이
+  $('cal-link').href = 'https://ttokjaetv.github.io/retire-calendar/' + (rows.length ? `?pen-amt=${Math.round(rows[0].w / 12 / 10000)}&pen-freq=m&age=${rows[0].age}` : '');
 
   $('plan-desc').textContent = total0 > 0
     ? `총 ${fmtMan(total0)}을 ${p.startAge}세부터 ${rows.length}년간(${p.startAge}~${lastAge}세) 받는 경우` + (S.leftover > 10000 ? ` · 100세에 ${fmtMan(S.leftover)}이 남아요` : '') + (p.mode === 'split' ? ` · 계좌 나누기(3은 연 ${T_SEP}만원까지, 부족분은 1·2에서)` : '')
