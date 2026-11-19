@@ -436,10 +436,11 @@
   @media (max-width: 768px) { .method-grid { grid-template-columns: 1fr; } .method-box { padding: 14px 14px; } }
   .scroll-hint { display: none; margin: 12px 0 -8px; text-align: center; font-size: 12px; font-weight: 700; color: var(--ink-mute); }
   .scroll-hint.sh-on { display: block; }
-  @media (max-width: 640px) { .scroll-hint.sh-640 { display: block; } }
-  @media (max-width: 650px) { .scroll-hint.sh-650 { display: block; } }
-  @media (max-width: 680px) { .scroll-hint.sh-680 { display: block; } }
-  @media (max-width: 850px) { .scroll-hint.sh-850 { display: block; } }
+  @media (max-width: 636px) { .scroll-hint.sh-636 { display: block; } }
+  @media (max-width: 678px) { .scroll-hint.sh-678 { display: block; } }
+  @media (max-width: 653px) { .scroll-hint.sh-653 { display: block; } }
+  @media (max-width: 848px) { .scroll-hint.sh-848 { display: block; } }
+  @media print { .scroll-hint { display: none !important; } }
 </style>
 </head>
 <body>
@@ -1085,7 +1086,7 @@
     <div class="split-cmp-wrap">
       <div class="chart-title" style="font-size:16px; margin-bottom:4px;">같은 금액을 원할 때, 방법별 비교</div>
       <div class="chart-subtitle" style="margin-bottom:6px;">매년 받고 싶은 금액은 똑같이 두고, 꺼내는 방법만 바꿨을 때예요.</div>
-      <p style="margin-bottom:8px" class="scroll-hint sh-640" aria-hidden="true">← 옆으로 밀어 보세요 →</p>
+      <p style="margin-bottom:8px" class="scroll-hint sh-636" aria-hidden="true">← 옆으로 밀어 보세요 →</p>
       <div class="table-wrap" style="margin-top:8px;">
         <table class="data-table" id="split-cmp">
           <thead><tr><th>방법</th><th>원하는 금액 유지</th><th><span class="bn n3">3</span> <span data-rule="PENSION.separateLimit/1e4">1,500</span>만원 초과</th><th>총 세금</th><th>실효세율</th></tr></thead>
@@ -1099,7 +1100,7 @@
         <span class="chart-title" style="font-size:15px;">연도별 배분표 (어느 바구니에서 얼마씩)</span>
         <span class="fold-btn"><span class="open-txt">펼치기 ▾</span><span class="close-txt">접기 ▴</span></span>
       </summary>
-      <p class="scroll-hint sh-680" aria-hidden="true">← 옆으로 밀어 보세요 →</p>
+      <p class="scroll-hint sh-678" aria-hidden="true">← 옆으로 밀어 보세요 →</p>
       <div class="table-wrap">
         <table class="data-table" id="split-table">
           <thead><tr><th>나이</th><th><span class="bn n3">3</span> 세액공제 받은 원금·수익</th><th><span class="bn n1">1</span> 세액공제 받지 않은 원금</th><th><span class="bn n2">2</span> 퇴직금</th><th>합계</th><th>세금</th><th>세후</th></tr></thead>
@@ -1175,7 +1176,7 @@
       </div>
       <div class="split-formula" id="cp-formula" style="font-weight:700; font-size:14px; line-height:1.6;"></div>
     </div>
-    <p class="scroll-hint sh-650" aria-hidden="true">← 옆으로 밀어 보세요 →</p>
+    <p class="scroll-hint sh-653" aria-hidden="true">← 옆으로 밀어 보세요 →</p>
     <div class="table-wrap" style="margin-top:14px;">
       <table class="data-table" id="cp-table">
         <thead><tr><th>누구 계좌에 있나</th><th>원하는 금액 유지</th><th><span class="bn n3">3</span> <span data-rule="PENSION.separateLimit/1e4">1,500</span>만원 초과</th><th>총 세금</th><th>실효세율</th></tr></thead>
@@ -1248,7 +1249,7 @@
     <div class="step-desc">같은 계좌를 다른 방법으로 꺼냈을 때입니다. 받는 기간이 길면 그동안 수익도 붙기 때문에 <b>총 세금보다 실효세율(세금 ÷ 받은 돈)</b>로 비교하는 게 공정해요.</div>
     <div class="chart-container" style="height:300px;"><canvas id="cmp-chart"></canvas></div>
     <div class="chart-fallback" id="cmp-fallback">차트를 불러오지 못했어요. 아래 표로 확인해 주세요.</div>
-    <p class="scroll-hint sh-850" aria-hidden="true">← 옆으로 밀어 보세요 →</p>
+    <p class="scroll-hint sh-848" aria-hidden="true">← 옆으로 밀어 보세요 →</p>
     <div class="table-wrap">
       <table class="data-table" id="cmp-table">
         <thead><tr><th>꺼내는 방법</th><th>받는 기간</th><th>총 인출액</th><th>총 세금</th><th>실효세율</th><th>세후 월평균</th><th>한도 초과</th></tr></thead>
